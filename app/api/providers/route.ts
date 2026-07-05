@@ -10,6 +10,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
+  if (session.providerId !== null) {
+    return NextResponse.json({ ok: false, error: "Only the AUK platform admin can onboard new providers" }, { status: 403 });
+  }
   const body = await req.json();
   const provider = await prisma.provider.create({
     data: { name: body.name, tagline: body.tagline || "", location: body.location || "", color: body.color || "#12808c", verified: false },

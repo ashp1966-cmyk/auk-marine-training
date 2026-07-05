@@ -11,10 +11,12 @@ datasource db {
 }
 
 model Admin {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
-  createdAt    DateTime @default(now())
+  providerId   String?   // null = platform super-admin (AUK); set = scoped to that one provider only
+  provider     Provider? @relation(fields: [providerId], references: [id])
+  createdAt    DateTime  @default(now())
 }
 
 model Provider {
@@ -26,6 +28,7 @@ model Provider {
   verified Boolean  @default(true)
   courses  Course[]
   research Research[]
+  admins   Admin[]
 }
 
 model Course {
@@ -151,6 +154,7 @@ model SiteSettings {
   footerAbout  String  @default("")
   logoUrl      String?
   fromEmail    String  @default("training@auk-maritime.com")
+  notifyEmail  String  @default("training@auk-maritime.com") // where booking/facilitator alerts are sent
   smsSender    String  @default("AUKMarine")
   whatsapp     String  @default("+27 61 078 5253")
   infoOfficer  String  @default("")
@@ -167,4 +171,23 @@ model PayfastSecret {
   merchantId   String  @default("")
   merchantKey  String  @default("")
   passphrase   String  @default("")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userType  String    // "admin" | "learner"
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Login-attempt rate limiting. A plain in-memory counter doesn't work reliably
+// on Vercel — each serverless invocation can be a fresh instance with its own
+// memory, so a Map-based limiter resets constantly. This table doesn't.
+model RateLimit {
+  key      String   @id // e.g. "admin-login:203.0.113.5"
+  count    Int      @default(0)
+  resetAt  DateTime
 }

@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
   const body = await req.json();
-  const project = await prisma.research.create({ data: body });
+  const providerId = session.providerId || body.providerId;
+  if (!providerId) return NextResponse.json({ ok: false, error: "Provider required" }, { status: 400 });
+  const project = await prisma.research.create({ data: { ...body, providerId } });
   return NextResponse.json({ ok: true, project });
 }

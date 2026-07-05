@@ -1,10 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function BookingForm({ course }: { course: any }) {
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState(course.modes[0] || "virtual");
   const [seats, setSeats] = useState(1);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [date, setDate] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -13,6 +15,10 @@ export default function BookingForm({ course }: { course: any }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ref, setRef] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/sessions?courseId=${course.id}`).then((r) => r.json()).then((d) => setSessions(d.sessions || []));
+  }, [course.id]);
 
   const isFree = course.price === 0;
   const total = (course.price * seats) / 100;
@@ -24,7 +30,7 @@ export default function BookingForm({ course }: { course: any }) {
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId: course.id, mode, seats, name, email, phone, org, consent, method: "payfast" }),
+        body: JSON.stringify({ courseId: course.id, mode, seats, date, name, email, phone, org, consent, method: "payfast" }),
       });
       const data = await res.json();
       if (!data.ok) { setError(data.error || "Something went wrong"); setBusy(false); return; }
@@ -86,6 +92,23 @@ export default function BookingForm({ course }: { course: any }) {
             <select value={mode} onChange={(e) => setMode(e.target.value)}>
               {course.modes.map((m: string) => <option key={m} value={m}>{m}</option>)}
             </select>
+          </div>
+          {sessions.length > 0 && (
+            <div className="field">
+              <label>Pick a scheduled cohort</label>
+              <select value={date} onChange={(e) => { const s = sessions.find((x) => x.date === e.target.value); setDate(e.target.value); if (s) setMode(s.mode); }}>
+                <option value="">— Choose your own date —</option>
+                {sessions.map((s) => (
+                  <option key={s.id} value={s.date}>
+                    {new Date(s.date).toLocaleDateString()} · {s.mode} · {Math.max(0, s.capacity - s.booked)} seats left
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="field">
+            <label>Preferred date</label>
+            <input type="date" value={date ? date.slice(0, 10) : ""} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="field">
             <label>Seats</label>

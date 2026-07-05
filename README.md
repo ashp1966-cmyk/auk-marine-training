@@ -14,6 +14,44 @@ in a browser. Same stack your own "Build Your Own AI Marketing App" course teach
   a customer's browser alone can never fake that.
 - **Real file storage.** Course photos/materials go to Vercel Blob storage — no size
   games, no browser storage limits.
+- **Real email.** Booking confirmations, payment receipts, and facilitator-application
+  alerts send via Resend (free tier) — a proper email replacing the earlier
+  WhatsApp-button workaround, once you add a `RESEND_API_KEY`.
+- **A full course player.** Materials, module-by-module content, the practical
+  demonstration, a quiz with a real pass mark, and a certificate — all reading and
+  writing real progress in the database, not the browser.
+- **Real scheduling.** Admin → Schedule creates real cohort sessions; the public
+  booking form reads them live and shows remaining seats.
+- **Real multi-tenant ownership.** Your original AUK admin account is the platform
+  super-admin. From Admin → Subscribers, you can invite a scoped admin for any
+  other provider — they get their own login, but the server enforces (not just
+  hides in the UI) that they can only see and edit their own provider's courses,
+  bookings, schedule and research. Settings, PayFast, and facilitator approval
+  stay super-admin-only, since those are platform-wide, not per-provider.
+- **Real PDF certificates.** Generated server-side (pdf-lib) and only ever issued
+  if the database genuinely shows 100% progress for that learner — not a client
+  claiming "I'm done," and not print-to-PDF.
+- **A real visual calendar.** Admin → Schedule is a proper month grid with sessions
+  as clickable pills, not a plain list.
+- **Real password reset & change.** Every admin (super or provider-scoped) can
+  change their own password under Admin → Account, and both admins and learners
+  have a genuine "forgot password" flow — a one-time, one-hour link emailed to
+  them, never a password shown or guessable in the URL.
+- **Admin access can actually be revoked.** Admin → Subscribers now lists every
+  admin account; the super-admin can revoke any provider-scoped admin instantly.
+  Revocation checks the database on every request, not just an eventually-expiring
+  token — so it takes effect on their very next click, not "whenever their session
+  happens to time out." (Built-in safeguards stop you revoking yourself or removing
+  the last super-admin.)
+- **Rate limiting that survives Vercel.** Login attempts are now tracked in the
+  database instead of an in-memory counter — the earlier version reset every time
+  a new serverless instance spun up, which happens constantly in production.
+- **PayFast's second verification layer.** Beyond checking PayFast's signature,
+  the webhook now also performs PayFast's own recommended server-to-server
+  "validate" callback before ever trusting a payment.
+- **Real automated tests** on the payment-signature logic (`npm test`) — verifying
+  signatures change when they should, reject tampering, and reject a forged
+  passphrase. Run before you deploy, and after any future change to `lib/payfast.ts`.
 - **Scope honestly:** this is a solid, working MVP of the full platform we built
   earlier (courses, bookings, PayFast, facilitators, research, admin, learner
   progress) — not a pixel-for-pixel port of every screen from the single-file
@@ -52,6 +90,7 @@ Project → **Settings → Environment Variables**:
 |---|---|
 | `SESSION_SECRET` | A long random string (32+ characters) — generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `NEXT_PUBLIC_SITE_URL` | Your Vercel URL, e.g. `https://auk-marine-training.vercel.app` (update after first deploy, then redeploy) |
+| `RESEND_API_KEY` | Optional — sign up free at resend.com, verify your sending domain (or use their test domain to start), paste the API key here. Without it, bookings/applications still work; emails are just skipped. |
 
 ### 6. Deploy
 - Click **Deploy** (or push again — every push auto-deploys, exactly like your

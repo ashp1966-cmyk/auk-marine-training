@@ -17,6 +17,9 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
+  if (session.providerId !== null) {
+    return NextResponse.json({ ok: false, error: "Only the AUK platform admin can change platform settings" }, { status: 403 });
+  }
 
   const body = await req.json();
   const { merchantId, merchantKey, passphrase, ...siteFields } = body;

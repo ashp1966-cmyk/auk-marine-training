@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { sendEmail, facilitatorApplicationAdminEmail } from "@/lib/email";
 
 // Public: view active facilitators (used on the public Facilitators page).
 export async function GET(req: NextRequest) {
@@ -34,5 +35,15 @@ export async function POST(req: NextRequest) {
       status: "pending",
     },
   });
+
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "singleton" } });
+  if (settings?.notifyEmail) {
+    sendEmail({
+      to: settings.notifyEmail,
+      subject: `New facilitator application — ${facilitator.name}`,
+      html: facilitatorApplicationAdminEmail(facilitator.name, facilitator.email || "", facilitator.role),
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true, facilitator });
 }

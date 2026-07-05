@@ -9,6 +9,7 @@ export async function GET() {
     ok: true,
     signedIn: !!session,
     email: session?.email ?? null,
+    providerId: session?.providerId ?? null,
     setupNeeded: !adminExists,
   });
 }

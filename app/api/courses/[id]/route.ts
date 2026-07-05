@@ -15,6 +15,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
 
+  const existing = await prisma.course.findUnique({ where: { id: params.id } });
+  if (!existing) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+  if (session.providerId && existing.providerId !== session.providerId) {
+    return NextResponse.json({ ok: false, error: "You can only edit your own provider's courses" }, { status: 403 });
+  }
+
   const body = await req.json();
   const course = await prisma.course.update({
     where: { id: params.id },
@@ -22,7 +28,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       code: body.code,
       title: body.title,
       category: body.category,
-      providerId: body.providerId,
+      // A scoped admin can never move a course to a different provider.
+      providerId: session.providerId || body.providerId,
       durationLabel: body.durationLabel,
       nqfLevel: body.nqfLevel || null,
       credits: body.credits || null,
@@ -46,6 +53,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
+
+  const existing = await prisma.course.findUnique({ where: { id: params.id } });
+  if (!existing) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+  if (session.providerId && existing.providerId !== session.providerId) {
+    return NextResponse.json({ ok: false, error: "You can only delete your own provider's courses" }, { status: 403 });
+  }
 
   await prisma.course.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });

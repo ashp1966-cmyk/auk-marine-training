@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { nanoid } from "nanoid";
 import { requireAdmin } from "@/lib/auth";
+import { sendEmail, bookingConfirmedEmail } from "@/lib/email";
 
 function generateRef() {
   return "AUK-" + nanoid(6).toUpperCase();
@@ -50,15 +51,22 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  sendEmail({
+    to: learner.email,
+    subject: `Booking ${isFree ? "confirmed" : "received"} — ${course.code}`,
+    html: bookingConfirmedEmail(learner.name, course.title, booking.ref),
+  }).catch(() => {});
+
   return NextResponse.json({ ok: true, booking, learnerId: learner.id });
 }
 
-// Admin: list all bookings.
+// Admin: list bookings — scoped to the admin's own provider, unless super-admin.
 export async function GET() {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
 
   const bookings = await prisma.booking.findMany({
+    where: session.providerId ? { course: { providerId: session.providerId } } : {},
     include: { course: true, learner: true },
     orderBy: { createdAt: "desc" },
   });

@@ -37,3 +37,25 @@ export function paymentUrl(mode: "sandbox" | "live") {
     ? "https://www.payfast.co.za/eng/process"
     : "https://sandbox.payfast.co.za/eng/process";
 }
+
+/** PayFast's own docs recommend a second layer beyond signature checking: post
+ *  the raw ITN body back to PayFast itself and confirm it echoes "VALID". This
+ *  catches a forged request that somehow reproduced a correct signature (e.g.
+ *  a leaked passphrase) but didn't actually originate from a real PayFast
+ *  transaction. Failing this check is treated as suspicious, not silently ignored. */
+export async function validateWithPayfast(rawBody: string, mode: "sandbox" | "live") {
+  const url = mode === "live"
+    ? "https://www.payfast.co.za/eng/query/validate"
+    : "https://sandbox.payfast.co.za/eng/query/validate";
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: rawBody,
+    });
+    const text = (await res.text()).trim();
+    return text === "VALID";
+  } catch {
+    return false;
+  }
+}

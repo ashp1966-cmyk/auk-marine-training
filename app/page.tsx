@@ -29,19 +29,24 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-5 py-14">
         <h2 className="font-serif text-2xl font-bold text-hull">Featured courses</h2>
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((c) => (
-            <Link href={`/course/${c.id}`} key={c.id} className="card block overflow-hidden transition hover:-translate-y-1 hover:shadow-md">
-              <div className="h-24 bg-gradient-to-br from-hull to-teal" />
-              <div className="p-4">
-                <div className="text-xs font-mono text-teal">{c.code}</div>
-                <h3 className="mt-1 font-serif text-lg font-bold">{c.title}</h3>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-500">{c.durationLabel}</span>
-                  <span className="font-serif font-bold">{c.price === 0 ? "Learnership" : `R${(c.price / 100).toLocaleString()}`}</span>
+          {featured.map((c) => {
+            const thumb = (c.photos as any[])?.[0]?.url;
+            return (
+              <Link href={`/course/${c.id}`} key={c.id} className="card block overflow-hidden transition hover:-translate-y-1 hover:shadow-md">
+                {thumb
+                  ? <img src={thumb} alt={c.title} className="h-24 w-full object-cover" />
+                  : <div className="h-24 bg-gradient-to-br from-hull to-teal" />}
+                <div className="p-4">
+                  <div className="text-xs font-mono text-teal">{c.code}</div>
+                  <h3 className="mt-1 font-serif text-lg font-bold">{c.title}</h3>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-gray-500">{c.durationLabel}</span>
+                    <span className="font-serif font-bold">{c.price === 0 ? "Learnership" : `R${(c.price / 100).toLocaleString()}`}</span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
         {featured.length === 0 && (
           <p className="mt-6 text-gray-500">No featured courses yet — add some from the Admin console.</p>

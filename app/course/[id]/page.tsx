@@ -52,7 +52,10 @@ export default async function CoursePage({ params }: { params: { id: string } })
           )}
         </div>
 
-        <BookingForm course={course} />
+        <div>
+          <BookingForm course={course} />
+          <a href={`/course/${course.id}/learn`} className="mt-3 block text-center text-sm text-teal hover:underline">Preview in LMS →</a>
+        </div>
       </div>
     </main>
   );

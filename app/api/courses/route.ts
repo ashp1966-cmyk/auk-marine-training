@@ -10,21 +10,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
   }
 
+  const where = includeUnpublished
+    ? (session!.providerId ? { providerId: session!.providerId } : {})
+    : { published: true };
+
   const courses = await prisma.course.findMany({
-    where: includeUnpublished ? {} : { published: true },
+    where,
     include: { provider: true, sessions: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ ok: true, courses });
 }
 
-// Admin only: create a course.
+// Admin only: create a course. A scoped admin can only create it under their own
+// provider, regardless of what providerId they send — the server decides this,
+// not the client.
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
 
   const body = await req.json();
-  if (!body.title || !body.providerId) {
+  const providerId = session.providerId || body.providerId;
+  if (!body.title || !providerId) {
     return NextResponse.json({ ok: false, error: "Title and provider are required" }, { status: 400 });
   }
 
@@ -33,7 +40,7 @@ export async function POST(req: NextRequest) {
       code: body.code || "AUK-NEW",
       title: body.title,
       category: body.category || "Business",
-      providerId: body.providerId,
+      providerId,
       durationLabel: body.durationLabel || "1 day",
       nqfLevel: body.nqfLevel || null,
       credits: body.credits || null,

@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await hashPassword(password);
-  const admin = await prisma.admin.create({ data: { email, passwordHash } });
-  await createAdminSession(admin.id, admin.email);
+  const admin = await prisma.admin.create({ data: { email, passwordHash, providerId: null } });
+  await createAdminSession(admin.id, admin.email, null);
 
   return NextResponse.json({ ok: true });
 }

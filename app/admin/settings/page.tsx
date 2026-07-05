@@ -35,6 +35,12 @@ export default function AdminSettings() {
       </div>
 
       <div className="card p-5">
+        <h2 className="font-semibold">Notifications</h2>
+        <p className="mt-1 text-xs text-gray-500">Where booking and facilitator-application emails are sent. Requires a RESEND_API_KEY environment variable in Vercel to actually send.</p>
+        <div className="field mt-3"><label>Notification email</label><input value={s.notifyEmail} onChange={(e) => setS({ ...s, notifyEmail: e.target.value })} /></div>
+      </div>
+
+      <div className="card p-5">
         <h2 className="font-semibold">Payments — PayFast</h2>
         <p className="mt-1 text-xs text-gray-500">Merchant ID/key/passphrase are write-only — once saved, they're never sent back to any browser, including yours.</p>
         <div className="field mt-3"><label>Enabled</label>

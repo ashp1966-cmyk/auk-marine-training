@@ -5,16 +5,20 @@ import { usePathname, useRouter } from "next/navigation";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "setup" | "login" | "in">("loading");
+  const [providerId, setProviderId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [error, setError] = useState("");
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   async function refresh() {
     const res = await fetch("/api/auth/me");
     const data = await res.json();
+    setProviderId(data.providerId ?? null);
     setStatus(data.setupNeeded ? "setup" : data.signedIn ? "in" : "login");
   }
 
@@ -44,9 +48,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     refresh();
   }
 
+  async function sendForgot() {
+    await fetch("/api/admin/forgot-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    setForgotSent(true);
+  }
+
+  if (pathname === "/admin/reset") {
+    return <>{children}</>; // public password-reset form — must bypass the session gate below
+  }
+
   if (status === "loading") return <div className="p-10 text-gray-400">Loading…</div>;
 
   if (status === "setup" || status === "login") {
+    if (status === "login" && forgotMode) {
+      return (
+        <main className="mx-auto max-w-md px-5 py-16">
+          <div className="card p-8">
+            <h1 className="font-serif text-2xl font-bold">Reset your passcode</h1>
+            {forgotSent ? (
+              <p className="mt-3 text-sm text-teal">If that email has an account, a reset link is on its way. Check your inbox.</p>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-gray-500">Enter your admin email and we'll send a reset link.</p>
+                <input className="mt-4 w-full rounded-md border border-gray-300 px-3 py-2" placeholder="Admin email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <button className="btn-primary mt-3 w-full justify-center" onClick={sendForgot}>Send reset link</button>
+              </>
+            )}
+            <button className="mt-4 text-sm text-gray-500 hover:underline" onClick={() => { setForgotMode(false); setForgotSent(false); }}>← Back to sign in</button>
+          </div>
+        </main>
+      );
+    }
+
     return (
       <main className="mx-auto max-w-md px-5 py-16">
         <div className="card p-8">
@@ -64,6 +97,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button className="btn-primary w-full justify-center" onClick={status === "setup" ? doSetup : doLogin}>
               {status === "setup" ? "Create admin account" : "Sign in"}
             </button>
+            {status === "login" && (
+              <button className="w-full text-center text-sm text-gray-500 hover:underline" onClick={() => setForgotMode(true)}>Forgot your passcode?</button>
+            )}
           </div>
         </div>
       </main>
@@ -73,9 +109,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const nav = [
     ["/admin", "Dashboard"],
     ["/admin/courses", "Courses"],
+    ["/admin/schedule", "Schedule"],
     ["/admin/bookings", "Bookings"],
-    ["/admin/facilitators", "Facilitators"],
-    ["/admin/settings", "Settings"],
+    ["/admin/research", "Research"],
+    ["/admin/account", "Account"],
+    ...(providerId === null
+      ? [["/admin/facilitators", "Facilitators"], ["/admin/subscribers", "Subscribers"], ["/admin/settings", "Settings"]]
+      : []),
   ];
 
   return (

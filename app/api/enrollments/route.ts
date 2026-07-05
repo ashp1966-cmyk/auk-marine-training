@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+export async function POST(req: NextRequest) {
+  const { email, name, courseId } = await req.json();
+  if (!email || !courseId) return NextResponse.json({ ok: false, error: "email and courseId required" }, { status: 400 });
+
+  const learner = await prisma.learner.upsert({
+    where: { email },
+    update: {},
+    create: { name: name || email.split("@")[0], email },
+  });
+
+  const enrollment = await prisma.enrollment.upsert({
+    where: { learnerId_courseId: { learnerId: learner.id, courseId } },
+    update: {},
+    create: { learnerId: learner.id, courseId },
+  });
+
+  return NextResponse.json({ ok: true, enrollment, learnerId: learner.id, learnerName: learner.name });
+}
 // Public (learner-facing): fetch a learner's enrollments by email.
 // A real production build should put learners behind their own login too —
 // this MVP identifies them by email, matching how bookings already work.

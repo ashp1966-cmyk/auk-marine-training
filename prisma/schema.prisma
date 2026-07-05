@@ -1,0 +1,170 @@
+// AUK Marine Training — database schema
+// Run `npm run db:push` after setting DATABASE_URL to create these tables.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Provider {
+  id       String   @id @default(cuid())
+  name     String
+  tagline  String   @default("")
+  location String   @default("")
+  color    String   @default("#12808c")
+  verified Boolean  @default(true)
+  courses  Course[]
+  research Research[]
+}
+
+model Course {
+  id            String     @id @default(cuid())
+  code          String
+  title         String
+  category      String
+  providerId    String
+  provider      Provider   @relation(fields: [providerId], references: [id])
+  durationLabel String     @default("1 day")
+  nqfLevel      String?
+  credits       Int?
+  modes         String[]   @default(["virtual", "classroom"])
+  price         Int        @default(0) // cents (ZAR); 0 = learnership / sponsored
+  summary       String     @default("")
+  outcomes      Json       @default("[]")
+  modules       Json       @default("[]") // [{title, content}]
+  photos        Json       @default("[]") // [{url, caption}]
+  videos        Json       @default("[]") // [{url, title}]
+  materials     Json       @default("[]") // [{name, url, ext, size}]
+  practical     Json       @default("{}") // {title, description}
+  quiz          Json       @default("[]") // [{q, options[], answer}]
+  featured      Boolean    @default(false)
+  published     Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  sessions      Session[]
+  bookings      Booking[]
+  enrollments   Enrollment[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  date       DateTime
+  mode       String   // virtual | classroom | onsite
+  capacity   Int      @default(20)
+  booked     Int      @default(0)
+  facilitator String  @default("")
+  venue      String?
+  platform   String?
+}
+
+model Learner {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  phone        String?
+  org          String?
+  passwordHash String?      // optional — set if the learner creates a password
+  consentAt    DateTime?
+  createdAt    DateTime     @default(now())
+  bookings     Booking[]
+  enrollments  Enrollment[]
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  ref           String   @unique
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id])
+  learnerId     String
+  learner       Learner  @relation(fields: [learnerId], references: [id])
+  mode          String
+  date          DateTime
+  seats         Int      @default(1)
+  amountCents   Int      @default(0)
+  method        String   @default("payfast") // payfast | eft | free
+  status        String   @default("Pending")  // Pending | Confirmed | Paid | Invoice sent | Enrolled | Cancelled
+  payfastPfPaymentId String?
+  createdAt     DateTime @default(now())
+}
+
+model Enrollment {
+  id               String   @id @default(cuid())
+  learnerId        String
+  learner          Learner  @relation(fields: [learnerId], references: [id])
+  courseId         String
+  course           Course   @relation(fields: [courseId], references: [id])
+  progress         Int      @default(0)
+  quizScore        Int?
+  completedModules Json     @default("[]")
+  createdAt        DateTime @default(now())
+
+  @@unique([learnerId, courseId])
+}
+
+model Facilitator {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?
+  role         String   @default("Facilitator")
+  country      String   @default("")
+  years        Int      @default(1)
+  expertise    Json     @default("[]")
+  availability Json     @default("[]")
+  bio          String   @default("")
+  status       String   @default("pending") // pending | active
+}
+
+model Research {
+  id            String    @id @default(cuid())
+  title         String
+  field         String    @default("General")
+  status        String    @default("Planning")
+  abstract      String    @default("")
+  lead          String    @default("AUK Marine")
+  collaborators Json      @default("[]")
+  seeking       String    @default("")
+  providerId    String
+  provider      Provider  @relation(fields: [providerId], references: [id])
+}
+
+// Single-row settings table — public-safe fields only.
+// PayFast merchant key / passphrase live in PayfastSecret, never returned to the browser.
+model SiteSettings {
+  id           String  @id @default("singleton")
+  heroTitle    String  @default("Train with people who've")
+  heroAccent   String  @default("actually done it.")
+  heroLead     String  @default("")
+  badge        String  @default("Accredited training provider")
+  footerAbout  String  @default("")
+  logoUrl      String?
+  fromEmail    String  @default("training@auk-maritime.com")
+  smsSender    String  @default("AUKMarine")
+  whatsapp     String  @default("+27 61 078 5253")
+  infoOfficer  String  @default("")
+  infoOfficerEmail String @default("")
+  retentionMonths Int  @default(36)
+  orgName      String  @default("AUK Marine and Mining (Pty) Ltd")
+  payfastEnabled Boolean @default(false)
+  payfastMode    String  @default("sandbox") // sandbox | live
+}
+
+// Kept separate from SiteSettings and never serialized to any API response.
+model PayfastSecret {
+  id           String  @id @default("singleton")
+  merchantId   String  @default("")
+  merchantKey  String  @default("")
+  passphrase   String  @default("")
+}

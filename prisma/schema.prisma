@@ -131,16 +131,17 @@ model Facilitator {
 }
 
 model Research {
-  id            String    @id @default(cuid())
+  id            String             @id @default(cuid())
   title         String
-  field         String    @default("General")
-  status        String    @default("Planning")
-  abstract      String    @default("")
-  lead          String    @default("AUK Marine")
-  collaborators Json      @default("[]")
-  seeking       String    @default("")
+  field         String             @default("General")
+  status        String             @default("Planning")
+  abstract      String             @default("")
+  lead          String             @default("AUK Marine")
+  collaborators Json               @default("[]")
+  seeking       String             @default("")
   providerId    String
-  provider      Provider  @relation(fields: [providerId], references: [id])
+  provider      Provider           @relation(fields: [providerId], references: [id])
+  interests     ResearchInterest[]
 }
 
 // Single-row settings table — public-safe fields only.
@@ -190,4 +191,26 @@ model RateLimit {
   key      String   @id // e.g. "admin-login:203.0.113.5"
   count    Int      @default(0)
   resetAt  DateTime
+}
+
+// Metadata (photo, description, colour) for each course category.
+// Name matches the category string used on Course records.
+model CategoryMeta {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  photoUrl    String?
+  description String  @default("")
+  color       String  @default("#12808c")
+}
+
+// Public expressions of interest in a research project.
+model ResearchInterest {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Research @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  org       String   @default("")
+  message   String   @default("")
+  createdAt DateTime @default(now())
 }

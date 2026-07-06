@@ -114,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     ["/admin/research", "Research"],
     ["/admin/account", "Account"],
     ...(providerId === null
-      ? [["/admin/facilitators", "Facilitators"], ["/admin/subscribers", "Subscribers"], ["/admin/settings", "Settings"]]
+      ? [["/admin/facilitators", "Facilitators"], ["/admin/categories", "Categories"], ["/admin/subscribers", "Subscribers"], ["/admin/settings", "Settings"]]
       : []),
   ];
 

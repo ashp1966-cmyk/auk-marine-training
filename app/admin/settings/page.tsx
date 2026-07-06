@@ -9,14 +9,17 @@ export default function AdminSettings() {
   const [notifyEmail, setNotifyEmail]   = useState("");
   const [whatsapp, setWhatsapp]         = useState("");
   const [orgName, setOrgName]           = useState("");
+
+  // PayFast — separate save, separate endpoint
   const [payfastEnabled, setPayfastEnabled] = useState(false);
   const [payfastMode, setPayfastMode]   = useState("sandbox");
   const [merchantId, setMerchantId]     = useState("");
   const [merchantKey, setMerchantKey]   = useState("");
   const [passphrase, setPassphrase]     = useState("");
-  const [saved, setSaved]               = useState(false);
-  const [saveError, setSaveError]       = useState("");
-  const [saving, setSaving]             = useState(false);
+
+  const [saved, setSaved]         = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving]       = useState(false);
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((d) => {
@@ -30,40 +33,44 @@ export default function AdminSettings() {
       setPayfastEnabled(!!s.payfastEnabled);
       setPayfastMode(s.payfastMode || "sandbox");
       setLoaded(true);
-    });
+    }).catch(() => setLoaded(true));
   }, []);
 
-  async function save() {
-    setSaving(true);
-    setSaved(false);
-    setSaveError("");
-
-    const payload: any = {
-      heroTitle, heroAccent, heroLead,
-      notifyEmail, whatsapp, orgName,
-      payfastEnabled, payfastMode,
-    };
-    // Only include PayFast secrets if the user actually typed something
-    if (merchantId.trim())  payload.merchantId  = merchantId.trim();
-    if (merchantKey.trim()) payload.merchantKey = merchantKey.trim();
-    if (passphrase.trim())  payload.passphrase  = passphrase.trim();
-
+  async function saveContent() {
+    setSaving(true); setSaved(""); setSaveError("");
     try {
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ heroTitle, heroAccent, heroLead, notifyEmail, whatsapp, orgName }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        setSaved(true);
-        setMerchantId(""); setMerchantKey(""); setPassphrase("");
-      } else {
-        setSaveError(data.error || "Save failed — unknown error");
-      }
-    } catch (e: any) {
-      setSaveError("Network error: " + e.message);
-    }
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (data.ok) setSaved("content");
+      else setSaveError(data.error || "Could not save content settings");
+    } catch (e: any) { setSaveError(e.message); }
+    setSaving(false);
+  }
+
+  async function savePayfast() {
+    setSaving(true); setSaved(""); setSaveError("");
+    try {
+      const res = await fetch("/api/payfast-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: payfastEnabled,
+          mode: payfastMode,
+          merchantId: merchantId.trim(),
+          merchantKey: merchantKey.trim(),
+          passphrase: passphrase.trim(),
+        }),
+      });
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (data.ok) { setSaved("payfast"); setMerchantId(""); setMerchantKey(""); setPassphrase(""); }
+      else setSaveError(data.error || "Could not save PayFast settings");
+    } catch (e: any) { setSaveError(e.message); }
     setSaving(false);
   }
 
@@ -78,7 +85,7 @@ export default function AdminSettings() {
         <div className="field mt-3"><label>Headline</label>
           <input value={heroTitle} onChange={(e) => setHeroTitle(e.target.value)} />
         </div>
-        <div className="field mt-3"><label>Headline highlight (italic accent)</label>
+        <div className="field mt-3"><label>Headline highlight (italic)</label>
           <input value={heroAccent} onChange={(e) => setHeroAccent(e.target.value)} />
         </div>
         <div className="field mt-3"><label>Intro paragraph</label>
@@ -90,25 +97,22 @@ export default function AdminSettings() {
         <div className="field mt-3"><label>WhatsApp number</label>
           <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
         </div>
-      </div>
-
-      <div className="card p-5">
-        <h2 className="font-semibold">Notifications</h2>
-        <p className="mt-1 text-xs text-gray-500">Where booking and facilitator-application emails are sent. Requires RESEND_API_KEY in Vercel.</p>
-        <div className="field mt-3"><label>Notification email</label>
+        <div className="field mt-3"><label>Notification email (for booking alerts)</label>
           <input type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} />
         </div>
+        {saved === "content" && <p className="mt-2 text-sm font-semibold text-teal">✓ Content saved</p>}
+        <button className="btn-primary mt-4" onClick={saveContent} disabled={saving}>
+          {saving ? "Saving…" : "Save content"}
+        </button>
       </div>
 
       <div className="card p-5">
         <h2 className="font-semibold">Payments — PayFast</h2>
         <p className="mt-1 text-xs text-gray-500">
-          Merchant ID/Key/Passphrase are write-only — once saved they're never sent back to any browser.
-          Leave the fields blank if you don't want to change them.
+          Merchant ID/Key/Passphrase are write-only. Leave credential fields blank to keep existing values.
         </p>
         <div className="field mt-3"><label>Status</label>
-          <select value={payfastEnabled ? "on" : "off"}
-            onChange={(e) => setPayfastEnabled(e.target.value === "on")}>
+          <select value={payfastEnabled ? "on" : "off"} onChange={(e) => setPayfastEnabled(e.target.value === "on")}>
             <option value="off">Off</option>
             <option value="on">On</option>
           </select>
@@ -120,28 +124,24 @@ export default function AdminSettings() {
           </select>
         </div>
         <div className="field mt-3">
-          <label>Merchant ID (numeric — from PayFast → Settings → Integration)</label>
+          <label>Merchant ID — the number from PayFast → Settings → Integration</label>
           <input value={merchantId} onChange={(e) => setMerchantId(e.target.value)}
-            placeholder="e.g. 10011072 — leave blank to keep existing" />
+            placeholder="e.g. 12953670" />
         </div>
-        <div className="field mt-3">
-          <label>Merchant Key</label>
+        <div className="field mt-3"><label>Merchant Key</label>
           <input type="password" value={merchantKey} onChange={(e) => setMerchantKey(e.target.value)}
             placeholder="Leave blank to keep existing" />
         </div>
-        <div className="field mt-3">
-          <label>Passphrase</label>
+        <div className="field mt-3"><label>Passphrase</label>
           <input type="password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)}
             placeholder="Leave blank to keep existing" />
         </div>
+        {saved === "payfast" && <p className="mt-2 text-sm font-semibold text-teal">✓ PayFast settings saved</p>}
+        {saveError && <p className="mt-2 text-sm text-red-600">❌ {saveError}</p>}
+        <button className="btn-primary mt-4" onClick={savePayfast} disabled={saving}>
+          {saving ? "Saving…" : "Save PayFast settings"}
+        </button>
       </div>
-
-      {saved      && <p className="font-semibold text-teal">✓ Settings saved successfully</p>}
-      {saveError  && <p className="text-sm text-red-600">❌ {saveError}</p>}
-
-      <button className="btn-primary" onClick={save} disabled={saving}>
-        {saving ? "Saving…" : "Save settings"}
-      </button>
     </div>
   );
 }

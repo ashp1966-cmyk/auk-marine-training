@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
-// Public: site content/branding needed to render the homepage — no secrets included.
 export async function GET() {
   const settings = await prisma.siteSettings.upsert({
     where: { id: "singleton" },
@@ -12,43 +11,56 @@ export async function GET() {
   return NextResponse.json({ ok: true, settings });
 }
 
-// Admin only: update site settings AND PayFast credentials in one call.
-// PayFast secret fields are written to a separate table and never echoed back.
 export async function PUT(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
   if (session.providerId !== null) {
-    return NextResponse.json({ ok: false, error: "Only the AUK platform admin can change platform settings" }, { status: 403 });
+    return NextResponse.json({ ok: false, error: "Only the AUK platform admin can change settings" }, { status: 403 });
   }
 
   const body = await req.json();
-  // Strip id, merchantId, merchantKey, passphrase from the site settings payload.
-  // id causes Prisma to reject the update (can't change a primary key).
-  // PayFast secrets go to the separate PayfastSecret table below.
-  const { id: _id, merchantId, merchantKey, passphrase, ...siteFields } = body;
+
+  // Only update known fields — never spread the whole body into Prisma
+  const siteData: any = {};
+  if (body.heroTitle    !== undefined) siteData.heroTitle    = String(body.heroTitle);
+  if (body.heroAccent   !== undefined) siteData.heroAccent   = String(body.heroAccent);
+  if (body.heroLead     !== undefined) siteData.heroLead     = String(body.heroLead);
+  if (body.badge        !== undefined) siteData.badge        = String(body.badge);
+  if (body.footerAbout  !== undefined) siteData.footerAbout  = String(body.footerAbout);
+  if (body.fromEmail    !== undefined) siteData.fromEmail    = String(body.fromEmail);
+  if (body.notifyEmail  !== undefined) siteData.notifyEmail  = String(body.notifyEmail);
+  if (body.whatsapp     !== undefined) siteData.whatsapp     = String(body.whatsapp);
+  if (body.orgName      !== undefined) siteData.orgName      = String(body.orgName);
+  if (body.payfastEnabled !== undefined) siteData.payfastEnabled = Boolean(body.payfastEnabled);
+  if (body.payfastMode  !== undefined) siteData.payfastMode  = String(body.payfastMode);
 
   try {
     const settings = await prisma.siteSettings.upsert({
       where: { id: "singleton" },
-      update: siteFields,
-      create: { id: "singleton", ...siteFields },
+      update: siteData,
+      create: { id: "singleton", ...siteData },
     });
 
-    if (merchantId !== undefined || merchantKey !== undefined || passphrase !== undefined) {
+    if (body.merchantId || body.merchantKey || body.passphrase) {
       await prisma.payfastSecret.upsert({
         where: { id: "singleton" },
         update: {
-          ...(merchantId !== undefined ? { merchantId } : {}),
-          ...(merchantKey !== undefined ? { merchantKey } : {}),
-          ...(passphrase !== undefined ? { passphrase } : {}),
+          ...(body.merchantId  ? { merchantId:  String(body.merchantId)  } : {}),
+          ...(body.merchantKey ? { merchantKey: String(body.merchantKey) } : {}),
+          ...(body.passphrase  ? { passphrase:  String(body.passphrase)  } : {}),
         },
-        create: { id: "singleton", merchantId: merchantId || "", merchantKey: merchantKey || "", passphrase: passphrase || "" },
+        create: {
+          id: "singleton",
+          merchantId:  String(body.merchantId  || ""),
+          merchantKey: String(body.merchantKey || ""),
+          passphrase:  String(body.passphrase  || ""),
+        },
       });
     }
 
     return NextResponse.json({ ok: true, settings });
   } catch (e: any) {
-    console.error("Settings save error:", e);
-    return NextResponse.json({ ok: false, error: e?.message || "Database error" }, { status: 500 });
+    console.error("Settings save error:", e?.message);
+    return NextResponse.json({ ok: false, error: e?.message || "Database error saving settings" }, { status: 500 });
   }
 }

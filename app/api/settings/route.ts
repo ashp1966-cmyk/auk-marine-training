@@ -2,65 +2,77 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
+const FALLBACK = NextResponse.json({ ok: false, error: "Unexpected server error" }, { status: 500 });
+
 export async function GET() {
-  const settings = await prisma.siteSettings.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-  return NextResponse.json({ ok: true, settings });
+  try {
+    const settings = await prisma.siteSettings.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    });
+    return NextResponse.json({ ok: true, settings });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || "DB error" }, { status: 500 });
+  }
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
-  if (session.providerId !== null) {
-    return NextResponse.json({ ok: false, error: "Only the AUK platform admin can change settings" }, { status: 403 });
-  }
-
-  const body = await req.json();
-
-  // Only update known fields — never spread the whole body into Prisma
-  const siteData: any = {};
-  if (body.heroTitle    !== undefined) siteData.heroTitle    = String(body.heroTitle);
-  if (body.heroAccent   !== undefined) siteData.heroAccent   = String(body.heroAccent);
-  if (body.heroLead     !== undefined) siteData.heroLead     = String(body.heroLead);
-  if (body.badge        !== undefined) siteData.badge        = String(body.badge);
-  if (body.footerAbout  !== undefined) siteData.footerAbout  = String(body.footerAbout);
-  if (body.fromEmail    !== undefined) siteData.fromEmail    = String(body.fromEmail);
-  if (body.notifyEmail  !== undefined) siteData.notifyEmail  = String(body.notifyEmail);
-  if (body.whatsapp     !== undefined) siteData.whatsapp     = String(body.whatsapp);
-  if (body.orgName      !== undefined) siteData.orgName      = String(body.orgName);
-  if (body.payfastEnabled !== undefined) siteData.payfastEnabled = Boolean(body.payfastEnabled);
-  if (body.payfastMode  !== undefined) siteData.payfastMode  = String(body.payfastMode);
-
   try {
+    const session = await requireAdmin();
+    if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
+    if (session.providerId !== null) {
+      return NextResponse.json({ ok: false, error: "Only the platform super-admin can change settings" }, { status: 403 });
+    }
+
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ ok: false, error: "Invalid request body" }, { status: 400 });
+    }
+
+    // Build a safe update payload with only known SiteSettings fields
+    const siteData: Record<string, any> = {};
+    if (typeof body.heroTitle    === "string") siteData.heroTitle    = body.heroTitle;
+    if (typeof body.heroAccent   === "string") siteData.heroAccent   = body.heroAccent;
+    if (typeof body.heroLead     === "string") siteData.heroLead     = body.heroLead;
+    if (typeof body.badge        === "string") siteData.badge        = body.badge;
+    if (typeof body.footerAbout  === "string") siteData.footerAbout  = body.footerAbout;
+    if (typeof body.fromEmail    === "string") siteData.fromEmail    = body.fromEmail;
+    if (typeof body.notifyEmail  === "string") siteData.notifyEmail  = body.notifyEmail;
+    if (typeof body.whatsapp     === "string") siteData.whatsapp     = body.whatsapp;
+    if (typeof body.orgName      === "string") siteData.orgName      = body.orgName;
+    if (typeof body.payfastMode  === "string") siteData.payfastMode  = body.payfastMode;
+    if (body.payfastEnabled !== undefined) siteData.payfastEnabled = body.payfastEnabled === true || body.payfastEnabled === "on";
+
+    // Save site settings
     const settings = await prisma.siteSettings.upsert({
       where: { id: "singleton" },
       update: siteData,
       create: { id: "singleton", ...siteData },
     });
 
-    if (body.merchantId || body.merchantKey || body.passphrase) {
+    // Save PayFast secrets separately if provided
+    const mid = typeof body.merchantId  === "string" ? body.merchantId.trim()  : "";
+    const mk  = typeof body.merchantKey === "string" ? body.merchantKey.trim() : "";
+    const pp  = typeof body.passphrase  === "string" ? body.passphrase.trim()  : "";
+
+    if (mid || mk || pp) {
       await prisma.payfastSecret.upsert({
         where: { id: "singleton" },
         update: {
-          ...(body.merchantId  ? { merchantId:  String(body.merchantId)  } : {}),
-          ...(body.merchantKey ? { merchantKey: String(body.merchantKey) } : {}),
-          ...(body.passphrase  ? { passphrase:  String(body.passphrase)  } : {}),
+          ...(mid ? { merchantId:  mid } : {}),
+          ...(mk  ? { merchantKey: mk  } : {}),
+          ...(pp  ? { passphrase:  pp  } : {}),
         },
-        create: {
-          id: "singleton",
-          merchantId:  String(body.merchantId  || ""),
-          merchantKey: String(body.merchantKey || ""),
-          passphrase:  String(body.passphrase  || ""),
-        },
+        create: { id: "singleton", merchantId: mid, merchantKey: mk, passphrase: pp },
       });
     }
 
     return NextResponse.json({ ok: true, settings });
   } catch (e: any) {
-    console.error("Settings save error:", e?.message);
-    return NextResponse.json({ ok: false, error: e?.message || "Database error saving settings" }, { status: 500 });
+    console.error("[settings PUT]", e?.message);
+    return NextResponse.json({ ok: false, error: e?.message || "Database error" }, { status: 500 });
   }
 }

@@ -1,32 +1,28 @@
 import crypto from "crypto";
 
 /**
- * PayFast integration notes:
- * - `buildSignature` creates the MD5 signature PayFast requires on the way OUT
- *   (when we send the customer to PayFast to pay).
- * - `verifyItnSignature` checks the signature PayFast sends back on the way IN
- *   (the "Instant Transaction Notification" webhook).
- *
- * IMPORTANT: PayFast's PHP library applies ksort() to fields before signing —
- * meaning they sort ALL keys alphabetically. We must do the same, otherwise
- * the signature we compute and the one PayFast verifies will never match.
- * Docs: https://developers.payfast.co.za/docs#step_2_signature
+ * PayFast integration:
+ * - buildSignature: MD5 over all non-empty fields in INSERTION ORDER (no sort).
+ *   PayFast verifies incoming payments by iterating $_POST in received order.
+ *   NOTE: PayFast's PHP ksort() is only used in their *ITN webhook handler*,
+ *   not when verifying the outbound payment signature we generate here.
+ * - verifyItnSignature: for the incoming ITN callback we sort alphabetically
+ *   to match PayFast's ksort() before they send us the signature.
  */
 
 function pfEncode(value: string) {
-  // Matches PHP's urlencode: spaces as +, special chars as %XX uppercase
   return encodeURIComponent(value)
     .replace(/%20/g, "+")
     .replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
 }
 
 export function buildSignature(params: Record<string, string>, passphrase: string) {
-  // Filter empty values, then sort alphabetically — PayFast's PHP lib uses ksort()
-  const sorted = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== "")
-    .sort(([a], [b]) => a.localeCompare(b));
-
-  let base = sorted.map(([k, v]) => `${k}=${pfEncode(String(v))}`).join("&");
+  // Filter empty values only — preserve insertion order so the signature matches
+  // what PayFast computes from the received POST body (which arrives in form order).
+  const nonEmpty = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== ""
+  );
+  let base = nonEmpty.map(([k, v]) => `${k}=${pfEncode(String(v))}`).join("&");
   if (passphrase) base += `&passphrase=${pfEncode(passphrase)}`;
   return crypto.createHash("md5").update(base).digest("hex");
 }

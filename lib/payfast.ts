@@ -5,21 +5,28 @@ import crypto from "crypto";
  * - `buildSignature` creates the MD5 signature PayFast requires on the way OUT
  *   (when we send the customer to PayFast to pay).
  * - `verifyItnSignature` checks the signature PayFast sends back on the way IN
- *   (the "Instant Transaction Notification" webhook) — this is what makes a
- *   booking's paid status trustworthy, instead of just believing the browser.
+ *   (the "Instant Transaction Notification" webhook).
+ *
+ * IMPORTANT: PayFast's PHP library applies ksort() to fields before signing —
+ * meaning they sort ALL keys alphabetically. We must do the same, otherwise
+ * the signature we compute and the one PayFast verifies will never match.
  * Docs: https://developers.payfast.co.za/docs#step_2_signature
  */
 
 function pfEncode(value: string) {
-  // PayFast requires PHP-style urlencode: spaces as '+', uppercase hex escapes.
-  return encodeURIComponent(value).replace(/%20/g, "+").replace(/[!'()*]/g, (c) =>
-    "%" + c.charCodeAt(0).toString(16).toUpperCase()
-  );
+  // Matches PHP's urlencode: spaces as +, special chars as %XX uppercase
+  return encodeURIComponent(value)
+    .replace(/%20/g, "+")
+    .replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
 }
 
 export function buildSignature(params: Record<string, string>, passphrase: string) {
-  const ordered = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "");
-  let base = ordered.map(([k, v]) => `${k}=${pfEncode(String(v))}`).join("&");
+  // Filter empty values, then sort alphabetically — PayFast's PHP lib uses ksort()
+  const sorted = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  let base = sorted.map(([k, v]) => `${k}=${pfEncode(String(v))}`).join("&");
   if (passphrase) base += `&passphrase=${pfEncode(passphrase)}`;
   return crypto.createHash("md5").update(base).digest("hex");
 }

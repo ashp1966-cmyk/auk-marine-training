@@ -43,6 +43,17 @@ export async function POST(req: NextRequest) {
 
   const signature = buildSignature(fields, secret.passphrase);
 
+  // TEMPORARY DIAGNOSTIC — remove after PayFast is working
+  const sorted = Object.entries(fields)
+    .filter(([, v]) => v !== "" && v != null)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const sigStr = sorted.map(([k, v]) => `${k}=${encodeURIComponent(v).replace(/%20/g, "+")}`).join("&");
+  console.error("PAYFAST_FIELDS:", JSON.stringify(sorted.map(([k, v]) => `${k}=${v}`)));
+  console.error("PAYFAST_SIG_STRING:", sigStr);
+  console.error("PAYFAST_SIGNATURE:", signature);
+  console.error("PAYFAST_PASSPHRASE_LEN:", secret.passphrase?.length || 0);
+  // END DIAGNOSTIC
+
   return NextResponse.json({
     ok: true,
     actionUrl: paymentUrl(settings.payfastMode as "sandbox" | "live"),

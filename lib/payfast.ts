@@ -17,11 +17,14 @@ function pfEncode(value: string) {
 }
 
 export function buildSignature(params: Record<string, string>, passphrase: string) {
-  // Exclude merchant_key from signature — sorted alphabetically.
-  // The merchant_key is sent in the form but some PayFast implementations
-  // exclude it from the MD5 calculation.
+  // Canonical PayFast signature per their developer docs:
+  // 1. All non-empty fields (merchant_key included)
+  // 2. Sorted alphabetically by key
+  // 3. URL-encoded values
+  // 4. Passphrase appended if set
+  // 5. MD5 hash
   const nonEmpty = Object.entries(params)
-    .filter(([k, v]) => k !== "merchant_key" && v !== undefined && v !== null && v !== "")
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   let base = nonEmpty.map(([k, v]) => `${k}=${pfEncode(String(v))}`).join("&");
   if (passphrase) base += `&passphrase=${pfEncode(passphrase)}`;

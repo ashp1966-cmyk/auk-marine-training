@@ -18,21 +18,28 @@ export async function POST(req: NextRequest) {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://" + req.headers.get("host");
-  const nameParts = booking.learner.name.split(" ");
+  const nameParts = booking.learner.name.trim().split(/\s+/);
 
-  const fields: Record<string, string> = {
-    merchant_id: secret.merchantId,
-    merchant_key: secret.merchantKey,
-    return_url: `${siteUrl}/booking/${booking.ref}/thanks`,
-    cancel_url: `${siteUrl}/booking/${booking.ref}/cancelled`,
-    notify_url: `${siteUrl}/api/payfast/notify`,
-    name_first: nameParts[0] || "",
-    name_last: nameParts.slice(1).join(" ") || "",
+  const rawFields: Record<string, string> = {
+    merchant_id:   secret.merchantId,
+    merchant_key:  secret.merchantKey,
+    return_url:    `${siteUrl}/booking/${booking.ref}/thanks`,
+    cancel_url:    `${siteUrl}/booking/${booking.ref}/cancelled`,
+    notify_url:    `${siteUrl}/api/payfast/notify`,
+    name_first:    nameParts[0] || "",
+    name_last:     nameParts.slice(1).join(" ") || "",
     email_address: booking.learner.email,
-    m_payment_id: booking.ref,
-    amount: (booking.amountCents / 100).toFixed(2),
-    item_name: `${booking.course.code} — ${booking.course.title}`.slice(0, 100),
+    m_payment_id:  booking.ref,
+    amount:        (booking.amountCents / 100).toFixed(2),
+    item_name:     `${booking.course.code} ${booking.course.title}`.slice(0, 100),
   };
+
+  // Remove empty values — PayFast's signature calculation excludes blank fields,
+  // and we must send exactly the same set of fields we sign, otherwise the
+  // signatures won't match even with correct credentials.
+  const fields: Record<string, string> = Object.fromEntries(
+    Object.entries(rawFields).filter(([, v]) => v !== undefined && v !== null && v !== "")
+  );
 
   const signature = buildSignature(fields, secret.passphrase);
 

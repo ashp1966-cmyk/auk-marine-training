@@ -22,25 +22,33 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { merchantId, merchantKey, passphrase, ...siteFields } = body;
+  // Strip id, merchantId, merchantKey, passphrase from the site settings payload.
+  // id causes Prisma to reject the update (can't change a primary key).
+  // PayFast secrets go to the separate PayfastSecret table below.
+  const { id: _id, merchantId, merchantKey, passphrase, ...siteFields } = body;
 
-  const settings = await prisma.siteSettings.upsert({
-    where: { id: "singleton" },
-    update: siteFields,
-    create: { id: "singleton", ...siteFields },
-  });
-
-  if (merchantId !== undefined || merchantKey !== undefined || passphrase !== undefined) {
-    await prisma.payfastSecret.upsert({
+  try {
+    const settings = await prisma.siteSettings.upsert({
       where: { id: "singleton" },
-      update: {
-        ...(merchantId !== undefined ? { merchantId } : {}),
-        ...(merchantKey !== undefined ? { merchantKey } : {}),
-        ...(passphrase !== undefined ? { passphrase } : {}),
-      },
-      create: { id: "singleton", merchantId: merchantId || "", merchantKey: merchantKey || "", passphrase: passphrase || "" },
+      update: siteFields,
+      create: { id: "singleton", ...siteFields },
     });
-  }
 
-  return NextResponse.json({ ok: true, settings });
+    if (merchantId !== undefined || merchantKey !== undefined || passphrase !== undefined) {
+      await prisma.payfastSecret.upsert({
+        where: { id: "singleton" },
+        update: {
+          ...(merchantId !== undefined ? { merchantId } : {}),
+          ...(merchantKey !== undefined ? { merchantKey } : {}),
+          ...(passphrase !== undefined ? { passphrase } : {}),
+        },
+        create: { id: "singleton", merchantId: merchantId || "", merchantKey: merchantKey || "", passphrase: passphrase || "" },
+      });
+    }
+
+    return NextResponse.json({ ok: true, settings });
+  } catch (e: any) {
+    console.error("Settings save error:", e);
+    return NextResponse.json({ ok: false, error: e?.message || "Database error" }, { status: 500 });
+  }
 }

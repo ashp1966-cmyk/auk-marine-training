@@ -7,18 +7,25 @@ export default function AdminSettings() {
   const [merchantKey, setMerchantKey] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => { fetch("/api/settings").then((r) => r.json()).then((d) => setS(d.settings)); }, []);
 
   async function save() {
     setSaved(false);
+    setSaveError("");
     const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...s, merchantId, merchantKey, passphrase }),
     });
     const data = await res.json();
-    if (data.ok) { setSaved(true); setMerchantId(""); setMerchantKey(""); setPassphrase(""); }
+    if (data.ok) {
+      setSaved(true);
+      setMerchantId(""); setMerchantKey(""); setPassphrase("");
+    } else {
+      setSaveError(data.error || "Could not save — check browser console for details");
+    }
   }
 
   if (!s) return <div className="p-10 text-gray-400">Loading…</div>;
@@ -59,6 +66,7 @@ export default function AdminSettings() {
       </div>
 
       {saved && <p className="text-teal">✓ Settings saved</p>}
+      {saveError && <p className="text-sm text-red-600">❌ {saveError}</p>}
       <button className="btn-primary" onClick={save}>Save settings</button>
     </div>
   );

@@ -17,15 +17,12 @@ function pfEncode(value: string) {
 }
 
 export function buildSignature(params: Record<string, string>, passphrase: string) {
-  // Canonical PayFast signature per their developer docs:
-  // 1. All non-empty fields (merchant_key included)
-  // 2. Sorted alphabetically by key
-  // 3. URL-encoded values
-  // 4. Passphrase appended if set
-  // 5. MD5 hash
-  const nonEmpty = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== "")
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  // Insertion order — match exactly the order fields appear in the form DOM.
+  // PayFast PHP iterates $_POST in received order (no ksort for payment signature).
+  // Passphrase appended if set.
+  const nonEmpty = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== ""
+  );
   let base = nonEmpty.map(([k, v]) => `${k}=${pfEncode(String(v))}`).join("&");
   if (passphrase) base += `&passphrase=${pfEncode(passphrase)}`;
   return crypto.createHash("md5").update(base).digest("hex");

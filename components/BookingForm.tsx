@@ -42,28 +42,10 @@ export default function BookingForm({ course }: { course: any }) {
         return;
       }
 
-      const pf = await fetch("/api/payfast/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: data.booking.id }),
-      });
-      const pfData = await pf.json();
-      if (!pfData.ok) { setError(pfData.error); setBusy(false); return; }
-
-      // Build and submit a real form to PayFast — this is a genuine redirect
-      // to PayFast's own hosted payment page, not a simulation.
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = pfData.actionUrl;
-      Object.entries(pfData.fields).forEach(([k, v]) => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = k;
-        input.value = String(v);
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-      form.submit();
+      // Navigate to server-rendered PayFast form — server computes signature
+      // and returns a self-submitting HTML page. This avoids any client-side
+      // form encoding or JSON serialization that could subtly alter field values.
+      window.location.href = `/api/payfast/form/${data.booking.ref}`;
     } catch (e) {
       setError("Network error — please try again");
       setBusy(false);

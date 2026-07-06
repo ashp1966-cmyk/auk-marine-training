@@ -28,16 +28,20 @@ export async function POST(req: NextRequest) {
       create: { id: "singleton", payfastEnabled: enabled, payfastMode: mode },
     });
 
-    // Save the secrets in their dedicated table
-    if (merchantId || merchantKey || passphrase) {
+    // Save the secrets — when merchantId or merchantKey change, always reset
+    // all three fields together so the old passphrase never lingers.
+    if (mid || mk) {
       await prisma.payfastSecret.upsert({
         where: { id: "singleton" },
-        update: {
-          ...(merchantId  ? { merchantId  } : {}),
-          ...(merchantKey ? { merchantKey } : {}),
-          ...(passphrase  ? { passphrase  } : {}),
-        },
-        create: { id: "singleton", merchantId, merchantKey, passphrase },
+        update: { merchantId: mid, merchantKey: mk, passphrase: pp },
+        create: { id: "singleton", merchantId: mid, merchantKey: mk, passphrase: pp },
+      });
+    } else if (pp) {
+      // Only passphrase changed, leave merchant ID/key intact
+      await prisma.payfastSecret.upsert({
+        where: { id: "singleton" },
+        update: { passphrase: pp },
+        create: { id: "singleton", merchantId: "", merchantKey: "", passphrase: pp },
       });
     }
 

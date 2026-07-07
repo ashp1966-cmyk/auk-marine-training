@@ -1,45 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { nanoid } from "nanoid";
 import { requireAdmin } from "@/lib/auth";
-import { sendEmail, bookingConfirmedEmail } from "@/lib/email";
+import { sendEmail, bookingReceivedEmail } from "@/lib/email";
 
-function generateRef() {
-  return "AUK-" + nanoid(6).toUpperCase();
-}
-
-// Public: anyone booking a course calls this. No admin data is exposed or required.
+// POST /api/bookings — create a booking (public, used by BookingForm)
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { courseId, mode, date, seats, name, email, phone, org, consent, method } = body;
+  const { courseId, mode, seats, date, name, email, phone, org, consent, method } = body;
 
   if (!courseId || !name || !email || !consent) {
-    return NextResponse.json({ ok: false, error: "Missing required fields or consent" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
   }
 
   const course = await prisma.course.findUnique({ where: { id: courseId } });
   if (!course) return NextResponse.json({ ok: false, error: "Course not found" }, { status: 404 });
 
-  const learner = await prisma.learner.upsert({
-    where: { email },
-    update: { name, phone, org },
-    create: { name, email, phone, org, consentAt: new Date() },
-  });
+  // Upsert a learner record — matches by email so repeat bookers keep one account
+  let learner = await prisma.learner.findUnique({ where: { email } });
+  if (!learner) {
+    learner = await prisma.learner.create({ data: { name, email, phone: phone || "", org: org || "", consentAt: consent ? new Date() : null } });
+  } else {
+    learner = await prisma.learner.update({ where: { email }, data: { name, phone: phone || undefined, org: org || undefined } });
+  }
 
-  const amountCents = (course.price || 0) * (seats || 1);
-  const isFree = amountCents === 0;
+  // Generate human-readable booking ref
+  const ref = `AUK-${Math.random().toString(36).slice(2, 5).toUpperCase()}-${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
 
+  const isFree = course.price === 0;
   const booking = await prisma.booking.create({
     data: {
-      ref: generateRef(),
+      ref,
       courseId,
       learnerId: learner.id,
       mode: mode || "virtual",
-      date: date ? new Date(date) : new Date(),
       seats: seats || 1,
-      amountCents,
-      method: isFree ? "free" : method || "payfast",
-      status: isFree ? "Enrolled" : "Pending",
+      date: date ? new Date(date) : new Date(),
+      amountCents: course.price,
+      method: isFree ? "free" : (method || "payfast"),
+      status: isFree ? "Confirmed" : "Pending",
     },
   });
 
@@ -51,24 +49,32 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  sendEmail({
-    to: learner.email,
-    subject: `Booking ${isFree ? "confirmed" : "received"} — ${course.code}`,
-    html: bookingConfirmedEmail(learner.name, course.title, booking.ref),
-  }).catch(() => {});
+  // Notify admin
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "singleton" } });
+  if (settings?.notifyEmail) {
+    sendEmail({
+      to: settings.notifyEmail,
+      subject: `Booking received — ${ref}`,
+      html: bookingReceivedEmail(name, email, course.title, ref, course.price),
+    }).catch(() => {});
+  }
 
-  return NextResponse.json({ ok: true, booking, learnerId: learner.id });
+  return NextResponse.json({ ok: true, booking: { id: booking.id, ref: booking.ref } });
 }
 
-// Admin: list bookings — scoped to the admin's own provider, unless super-admin.
-export async function GET() {
+// GET /api/bookings — list bookings (admin only)
+export async function GET(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
 
   const bookings = await prisma.booking.findMany({
-    where: session.providerId ? { course: { providerId: session.providerId } } : {},
-    include: { course: true, learner: true },
+    where: session.providerId ? { course: { providerId: session.providerId } } : undefined,
+    include: {
+      course: { select: { title: true, code: true } },
+      learner: { select: { name: true, email: true } },
+    },
     orderBy: { createdAt: "desc" },
+    take: 500,
   });
   return NextResponse.json({ ok: true, bookings });
 }

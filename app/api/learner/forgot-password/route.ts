@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createResetToken } from "@/lib/passwordReset";
 import { sendEmail } from "@/lib/email";
-
+import { checkRateLimit } from "@/lib/rateLimit";
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const rl = await checkRateLimit(`learner-forgot:${ip}`, 5, 15 * 60 * 1000); // 5 per 15 min
+  if (!rl.allowed) return NextResponse.json({ ok: true, message: "If that email has an account, a reset link is on its way." }); // Don't reveal rate limit
   const { email } = await req.json();
   if (!email) return NextResponse.json({ ok: false, error: "Email required" }, { status: 400 });
 

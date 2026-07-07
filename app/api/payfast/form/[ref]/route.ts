@@ -52,12 +52,6 @@ export async function GET(req: NextRequest, { params }: { params: { ref: string 
     const signature  = buildSignature(fields, passphrase);
     const actionUrl  = paymentUrl(settings.payfastMode as "sandbox" | "live");
 
-    // Log for debugging
-    const sigFields = Object.entries(fields).filter(([, v]) => v !== "" && v != null);
-    console.error("PF_HTML_FIELDS:", JSON.stringify(sigFields.map(([k, v]) => `${k}=${v}`)));
-    console.error("PF_HTML_PASSPHRASE_LEN:", passphrase.length);
-    console.error("PF_HTML_SIGNATURE:", signature);
-
     // Escape HTML attribute values
     function esc(v: string) {
       return v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

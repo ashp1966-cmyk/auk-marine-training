@@ -126,15 +126,15 @@ export default function AdminSettings() {
         <div className="field mt-3">
           <label>Merchant ID — the number from PayFast → Settings → Integration</label>
           <input value={merchantId} onChange={(e) => setMerchantId(e.target.value)}
-            placeholder="e.g. 12953670" />
+            placeholder="e.g. 12953670" autoComplete="off" inputMode="numeric" />
         </div>
         <div className="field mt-3"><label>Merchant Key</label>
-          <input type="password" value={merchantKey} onChange={(e) => setMerchantKey(e.target.value)}
-            placeholder="Leave blank to keep existing" />
+          <input type="text" value={merchantKey} onChange={(e) => setMerchantKey(e.target.value)}
+            placeholder="Leave blank to keep existing" autoComplete="off" />
         </div>
         <div className="field mt-3"><label>Passphrase</label>
-          <input type="password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)}
-            placeholder="Leave blank to keep existing" />
+          <input type="text" value={passphrase} onChange={(e) => setPassphrase(e.target.value)}
+            placeholder="Leave blank to keep existing" autoComplete="off" />
         </div>
         {saved === "payfast" && <p className="mt-2 text-sm font-semibold text-teal">✓ PayFast settings saved</p>}
         {saveError && <p className="mt-2 text-sm text-red-600">❌ {saveError}</p>}

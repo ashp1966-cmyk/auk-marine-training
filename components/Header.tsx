@@ -7,12 +7,12 @@ export default function Header() {
   const [learner, setLearner] = useState<{ signedIn: boolean; name?: string } | null>(null);
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setAdmin({ signedIn: !!d.signedIn, email: d.email }))
       .catch(() => setAdmin({ signedIn: false }));
 
-    fetch("/api/learner/me")
+    fetch("/api/learner/me", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setLearner({ signedIn: !!d.signedIn, name: d.learner?.name }))
       .catch(() => setLearner({ signedIn: false }));

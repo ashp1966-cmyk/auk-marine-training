@@ -9,7 +9,7 @@ export default function Header() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((d) => setAdmin({ signedIn: !!d.signedIn, email: d.admin?.email }))
+      .then((d) => setAdmin({ signedIn: !!d.signedIn, email: d.email }))
       .catch(() => setAdmin({ signedIn: false }));
 
     fetch("/api/learner/me")

@@ -6,7 +6,7 @@ export default function Header() {
   const [admin, setAdmin]     = useState<{ signedIn: boolean; email?: string } | null>(null);
   const [learner, setLearner] = useState<{ signedIn: boolean; name?: string } | null>(null);
 
-  useEffect(() => {
+  function checkAuth() {
     fetch("/api/auth/me", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setAdmin({ signedIn: !!d.signedIn, email: d.email }))
@@ -16,6 +16,13 @@ export default function Header() {
       .then((r) => r.json())
       .then((d) => setLearner({ signedIn: !!d.signedIn, name: d.learner?.name }))
       .catch(() => setLearner({ signedIn: false }));
+  }
+
+  useEffect(() => {
+    checkAuth();
+    // Re-check when user navigates back to this tab
+    window.addEventListener("focus", checkAuth);
+    return () => window.removeEventListener("focus", checkAuth);
   }, []);
 
   return (

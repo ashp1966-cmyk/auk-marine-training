@@ -24,7 +24,7 @@ export default function CourseForm({ existing }: { existing?: any }) {
   const [priceRand, setPriceRand] = useState(existing ? existing.price / 100 : 2500);
   const [nqfLevel, setNqfLevel] = useState(existing?.nqfLevel || "");
   const [credits, setCredits] = useState(existing?.credits || "");
-  const [modes, setModes] = useState<string[]>(existing?.modes || ["virtual", "classroom"]);
+  
   const [featured, setFeatured] = useState(!!existing?.featured);
   const [published, setPublished] = useState(existing?.published !== false);
 
@@ -55,10 +55,6 @@ export default function CourseForm({ existing }: { existing?: any }) {
       if (!providerId && list[0]) setProviderId(list[0].id);
     });
   }, []);
-
-  function toggleMode(m: string) {
-    setModes((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
-  }
 
   async function uploadFile(file: File, kind: "photo" | "material") {
     const fd = new FormData();
@@ -98,7 +94,7 @@ export default function CourseForm({ existing }: { existing?: any }) {
       durationLabel, price: Math.round(priceRand * 100),
       nqfLevel: nqfLevel || null,
       credits: credits ? parseInt(credits) : null,
-      modes, featured, published,
+      featured, published,
       summary,
       outcomes: outcomes.split("\n").map((s) => s.trim()).filter(Boolean),
       modules: modules.filter((m) => m.title.trim()),
@@ -163,18 +159,6 @@ export default function CourseForm({ existing }: { existing?: any }) {
               <div className="field"><label>Price (ZAR) — 0 = learnership</label><input type="number" min={0} value={priceRand} onChange={(e) => setPriceRand(+e.target.value)} /></div>
               <div className="field"><label>NQF Level</label><input value={nqfLevel} onChange={(e) => setNqfLevel(e.target.value)} placeholder="e.g. Level 3" /></div>
               <div className="field"><label>Credits</label><input type="number" min={0} value={credits} onChange={(e) => setCredits(e.target.value)} /></div>
-            </div>
-
-            <div className="field">
-              <label>Delivery modes</label>
-              <div className="flex gap-2 flex-wrap">
-                {["virtual", "classroom", "online", "onsite"].map((m) => (
-                  <button key={m} type="button" onClick={() => toggleMode(m)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${modes.includes(m) ? "border-teal bg-teal text-white" : "border-gray-300 hover:border-teal"}`}>
-                    {m}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

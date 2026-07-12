@@ -36,10 +36,10 @@ async function main() {
       heroTitle: "Train with people who've",
       heroAccent: "actually done it.",
       heroLead:
-        "AUK Marine Training runs the whole journey — browse a course, book virtual or in-classroom, pay securely, and learn through a full LMS. Plus a home for our research lab and a place for facilitators anywhere to teach.",
+        "AUK Marine Training runs the whole journey — browse a course, enrol online, pay securely, and learn through a full LMS. Plus a home for our research lab and a place for facilitators anywhere to teach.",
       badge: "Accredited training provider",
       footerAbout:
-        "TETA-accredited service provider · Est. 2012 & 2017. Maritime, mining, logistics, business, IT and soft-skills training delivered online, in-classroom, and on site from Johannesburg.",
+        "TETA-accredited service provider · Est. 2012 & 2017. Maritime, mining, logistics, business, IT and soft-skills training delivered fully online from Johannesburg.",
       whatsapp: "+27 61 078 5253",
       fromEmail: "training@auk-maritime.com",
       notifyEmail: "training@auk-maritime.com",
@@ -268,7 +268,7 @@ async function main() {
     { code: "US-242996", title: "Handle Dangerous Goods During Warehousing & Storage",  durationLabel: "Unit Standard", price: P.free, nqfLevel: "Level 4", credits: 4  },
     { code: "US-242987", title: "Identify, Pack, Mark & Label Dangerous Goods for Transportation by Air", durationLabel: "Unit Standard", price: P.free, nqfLevel: "Level 4", credits: 2 },
   ];
-  for (const c of logistics) await upsertCourse({ ...c, category: "Logistics", modes: ["classroom", "virtual"] });
+  for (const c of logistics) await upsertCourse({ ...c, category: "Logistics", modes: ["online"] });
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // FACILITATORS

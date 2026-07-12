@@ -109,7 +109,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const nav = [
     ["/admin", "Dashboard"],
     ["/admin/courses", "Courses"],
-    ["/admin/schedule", "Schedule"],
     ["/admin/bookings", "Bookings"],
     ["/admin/research", "Research"],
     ["/admin/account", "Account"],

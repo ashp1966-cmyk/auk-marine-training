@@ -10,7 +10,7 @@ type Video = { title: string; url: string };
 type Photo = { url: string; caption: string };
 type Material = { name: string; url: string; ext: string };
 
-export default function CourseForm({ existing }: { existing?: any }) {
+export default function CourseForm({ existing, initialTab }: { existing?: any; initialTab?: "basic" | "content" | "media" | "quiz" }) {
   const router = useRouter();
   const [providers, setProviders] = useState<any[]>([]);
   const [scopedProviderId, setScopedProviderId] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export default function CourseForm({ existing }: { existing?: any }) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"basic" | "content" | "media" | "quiz">("basic");
+  const [activeTab, setActiveTab] = useState<"basic" | "content" | "media" | "quiz">(initialTab || "basic");
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => setScopedProviderId(d.providerId ?? null));
@@ -112,23 +112,32 @@ export default function CourseForm({ existing }: { existing?: any }) {
   }
 
   const tabs = [
-    { key: "basic", label: "Basic info" },
-    { key: "content", label: "Content & modules" },
-    { key: "media", label: "Photos, videos & files" },
-    { key: "quiz", label: `Quiz (${quiz.length})` },
+    { key: "basic",   label: "1 · Basic info",           icon: "📋" },
+    { key: "content", label: "2 · Lessons & modules",    icon: "📖" },
+    { key: "media",   label: "3 · Photos, videos & files", icon: "🎬" },
+    { key: "quiz",    label: `4 · Quiz (${quiz.length} Q)`, icon: "✅" },
   ] as const;
 
   return (
     <div className="card">
-      {/* Tab nav */}
-      <div className="flex border-b border-gray-200">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-3 text-sm font-semibold ${activeTab === t.key ? "border-b-2 border-teal text-teal" : "text-gray-500 hover:text-gray-700"}`}>
-            {t.label}
-          </button>
-        ))}
+      {/* Tab nav — prominent so users know the 4 sections exist */}
+      <div className="border-b border-gray-200 bg-gray-50 px-4 pt-3">
+        <div className="flex flex-wrap gap-1">
+          {tabs.map((t) => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)}
+              className={`flex items-center gap-1.5 rounded-t-lg px-4 py-2.5 text-sm font-semibold transition ${
+                activeTab === t.key
+                  ? "border border-b-0 border-gray-200 bg-white text-teal"
+                  : "text-gray-500 hover:text-hull"
+              }`}>
+              <span>{t.icon}</span>{t.label}
+            </button>
+          ))}
+        </div>
       </div>
+      <p className="bg-teal/5 px-5 py-2 text-xs text-teal border-b border-teal/10">
+        Complete all 4 tabs to build a full course with content, videos and assessment quiz. Save each tab individually.
+      </p>
 
       <div className="space-y-4 p-6">
 

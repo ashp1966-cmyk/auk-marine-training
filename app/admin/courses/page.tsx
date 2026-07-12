@@ -74,7 +74,9 @@ export default function AdminCourses() {
                   </button>
                 </td>
                 <td className="p-3 text-right whitespace-nowrap">
-                  <Link href={`/course/${c.id}`} target="_blank" className="mr-3 text-xs text-gray-400 hover:text-teal">Preview ↗</Link>
+                  <Link href={`/course/${c.id}`} target="_blank" className="mr-2 text-xs text-gray-400 hover:text-teal">Preview ↗</Link>
+                  <Link href={`/admin/courses/${c.id}?tab=content`} className="mr-2 text-xs text-blue-500 hover:underline">Content</Link>
+                  <Link href={`/admin/courses/${c.id}?tab=quiz`} className="mr-2 text-xs text-purple-500 hover:underline">Quiz</Link>
                   <Link href={`/admin/courses/${c.id}`} className="btn-ghost mr-2 text-xs">Edit</Link>
                   <button onClick={() => del(c.id, c.title)} className="text-xs text-red-500 hover:underline">Delete</button>
                 </td>

@@ -1,49 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { sendEmail, facilitatorApplicationAdminEmail } from "@/lib/email";
 
-// Public: view active facilitators (used on the public Facilitators page).
+// GET — returns active facilitators (public) or all (admin with ?pending=1)
 export async function GET(req: NextRequest) {
-  const wantPending = req.nextUrl.searchParams.get("pending") === "1";
-  if (wantPending) {
+  const wantAll = req.nextUrl.searchParams.get("pending") === "1";
+  if (wantAll) {
     const session = await requireAdmin();
     if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
     const facilitators = await prisma.facilitator.findMany({ orderBy: { id: "desc" } });
     return NextResponse.json({ ok: true, facilitators });
   }
-  const facilitators = await prisma.facilitator.findMany({ where: { status: "active" } });
+  // Public page: only the two core facilitators
+  const facilitators = await prisma.facilitator.findMany({
+    where: { id: { in: ["capt-ashwani", "kalpana-pathak"] } },
+    orderBy: { name: "asc" },
+  });
   return NextResponse.json({ ok: true, facilitators });
 }
-
-// Public: anyone can apply to be a facilitator — lands as "pending" for admin review.
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  if (!body.name || !body.email || !body.consent) {
-    return NextResponse.json({ ok: false, error: "Missing required fields or consent" }, { status: 400 });
-  }
-  const facilitator = await prisma.facilitator.create({
-    data: {
-      name: body.name,
-      email: body.email,
-      role: body.role || "Facilitator",
-      country: body.country || "",
-      years: body.years || 1,
-      expertise: body.expertise || [],
-      availability: body.availability || [],
-      bio: body.bio || "",
-      status: "pending",
-    },
-  });
-
-  const settings = await prisma.siteSettings.findUnique({ where: { id: "singleton" } });
-  if (settings?.notifyEmail) {
-    sendEmail({
-      to: settings.notifyEmail,
-      subject: `New facilitator application — ${facilitator.name}`,
-      html: facilitatorApplicationAdminEmail(facilitator.name, facilitator.email || "", facilitator.role),
-    }).catch(() => {});
-  }
-
-  return NextResponse.json({ ok: true, facilitator });
-}
+// POST removed — facilitator applications are closed

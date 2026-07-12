@@ -41,7 +41,7 @@ export default async function CoursePage({ params }: { params: { id: string } })
             <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-white/70">
               <span className="rounded bg-brass/20 border border-brass/30 px-2 py-0.5 text-xs font-bold text-brass2">{course.code}</span>
               <span>🕐 {course.durationLabel}{totalMins > 0 ? ` · ~${totalMins} min content` : ""}</span>
-              <span>🖥️ Online self-paced</span>
+              <span>🖥️ Self-paced</span>
               {course.nqfLevel && <span>📋 NQF {course.nqfLevel}</span>}
               {course.credits && <span>· {course.credits} credits</span>}
             </div>

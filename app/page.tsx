@@ -40,7 +40,7 @@ export default async function Home() {
           </div>
           <div className="mt-10 flex flex-wrap gap-6 text-sm text-white/60">
             <span>✓ {allCourses.length}+ courses</span>
-            <span>✓ Online self-paced</span>
+            <span>✓ Self-paced online</span>
             <span>✓ TETA accredited</span>
             <span>✓ PDF certificates</span>
           </div>

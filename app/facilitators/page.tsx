@@ -1,58 +1,42 @@
-"use client";
-import { useEffect, useState } from "react";
+import { prisma } from "@/lib/db";
 
-export default function Facilitators() {
-  const [list, setList] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: "", email: "", role: "", country: "", bio: "", consent: false });
-  const [sent, setSent] = useState(false);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    fetch("/api/facilitators").then((r) => r.json()).then((d) => setList(d.facilitators || []));
-  }, []);
-
-  async function apply() {
-    const res = await fetch("/api/facilitators", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    if (data.ok) setSent(true);
-  }
+export default async function Facilitators() {
+  // Only show the two core AUK facilitators
+  const list = await prisma.facilitator.findMany({
+    where: { id: { in: ["capt-ashwani", "kalpana-pathak"] } },
+    orderBy: { name: "asc" },
+  });
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-12">
-      <h1 className="font-serif text-3xl font-bold text-hull">Our facilitators</h1>
-      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+    <main className="mx-auto max-w-4xl px-5 py-12">
+      <h1 className="font-serif text-3xl font-bold text-hull">Your facilitators</h1>
+      <p className="mt-2 text-gray-500">All AUK Marine courses are delivered by our experienced in-house team.</p>
+
+      <div className="mt-8 grid gap-6 sm:grid-cols-2">
         {list.map((f) => (
-          <div key={f.id} className="card p-5">
-            <div className="font-serif text-lg font-bold">{f.name}</div>
-            <div className="text-sm text-gray-500">{f.role}</div>
-            <p className="mt-2 text-sm text-gray-600">{f.bio}</p>
+          <div key={f.id} className="card p-6">
+            <div className="flex items-start gap-4">
+              <div className="grid h-14 w-14 flex-shrink-0 place-items-center rounded-full bg-teal/10 font-serif text-2xl font-bold text-teal">
+                {f.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+              </div>
+              <div>
+                <div className="font-serif text-lg font-bold text-hull">{f.name}</div>
+                <div className="text-sm font-semibold text-teal">{f.role}</div>
+                <div className="mt-0.5 text-xs text-gray-400">{f.country}</div>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-gray-600 leading-relaxed">{f.bio}</p>
+            {(f.expertise as string[])?.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-1">
+                {(f.expertise as string[]).map((e: string) => (
+                  <span key={e} className="rounded-full bg-foam px-2 py-0.5 text-xs font-semibold text-gray-500">{e}</span>
+                ))}
+              </div>
+            )}
           </div>
         ))}
-      </div>
-
-      <div className="card mt-10 p-6">
-        <h2 className="font-serif text-xl font-bold">Apply to facilitate</h2>
-        {sent ? (
-          <p className="mt-3 text-teal">Thanks — your application is in for review.</p>
-        ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <input className="rounded-md border border-gray-300 px-3 py-2" placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <input className="rounded-md border border-gray-300 px-3 py-2" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            <input className="rounded-md border border-gray-300 px-3 py-2" placeholder="Role / title" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
-            <input className="rounded-md border border-gray-300 px-3 py-2" placeholder="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-            <textarea className="col-span-2 rounded-md border border-gray-300 px-3 py-2" placeholder="Short bio" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
-            <label className="col-span-2 flex gap-2 text-xs text-gray-600">
-              <input type="checkbox" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} />
-              I consent to AUK Marine processing my information to review this application (POPIA).
-            </label>
-            <button className="btn-primary col-span-2 justify-center" onClick={apply} disabled={!form.name || !form.email || !form.consent}>
-              Submit application
-            </button>
-          </div>
-        )}
       </div>
     </main>
   );

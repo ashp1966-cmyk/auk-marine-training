@@ -67,7 +67,7 @@ export default function BookingForm({ course }: { course: any }) {
         {isFree ? "Sponsored" : `R${(course.price / 100).toLocaleString()}`}
       </div>
       <div className="mt-1 flex items-center gap-2 text-xs text-gray-400">
-        <span>🖥️ Online LMS</span>
+        <span>🖥️ Self-paced online</span>
         <span>·</span>
         <span>{course.durationLabel}</span>
       </div>

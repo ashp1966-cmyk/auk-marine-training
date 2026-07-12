@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
   if (!enrollment || !learner || !course) {
     return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
   }
+  if (course.price === 0) {
+    return NextResponse.json({ ok: false, error: "Certificates are issued for paid courses only" }, { status: 403 });
+  }
   if (enrollment.progress < 100) {
     return NextResponse.json({ ok: false, error: "This course isn't complete yet" }, { status: 403 });
   }

@@ -62,7 +62,8 @@ export default function CoursePlayer() {
     ...modules.map((m, i) => ({ key: i, label: m.title, kind: "module" as const, minutes: readMins(m.content) })),
     ...(course.practical?.title ? [{ key: "demo", label: "Practical demonstration", kind: "demo" as const, minutes: 10 }] : []),
     ...(quiz.length ? [{ key: "quiz", label: "Assessment quiz", kind: "quiz" as const, minutes: quiz.length * 2 }] : []),
-    { key: "cert", label: "Certificate", kind: "cert" as const },
+    // Certificate only for paid courses
+    ...(course.price > 0 ? [{ key: "cert", label: "Certificate", kind: "cert" as const }] : []),
   ], [course]);
 
   // Auto-resume: jump to first incomplete item once, when enrollment loads

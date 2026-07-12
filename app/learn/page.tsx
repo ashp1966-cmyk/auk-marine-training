@@ -57,25 +57,75 @@ export default function Learn() {
   if (mode === "loading") return <div className="p-10 text-gray-400">Loading…</div>;
 
   if (mode === "in") {
+    const done = (enrollments || []).filter((e) => e.progress >= 100).length;
+    const inProgress = (enrollments || []).filter((e) => e.progress > 0 && e.progress < 100).length;
+    const R = 20, C = 2 * Math.PI * R;
+    const continueCourse = (enrollments || []).find((e) => e.progress > 0 && e.progress < 100) || (enrollments || []).find((e) => e.progress === 0);
     return (
-      <main className="mx-auto max-w-3xl px-5 py-12">
+      <main className="mx-auto max-w-4xl px-5 py-12">
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-3xl font-bold text-hull">My Learning</h1>
+          <div>
+            <h1 className="font-serif text-3xl font-bold text-hull">My Learning</h1>
+            <p className="mt-1 text-gray-500">Welcome back, {learner.name.split(" ")[0]}</p>
+          </div>
           <button onClick={signOut} className="text-sm text-red-600 hover:underline">Sign out</button>
         </div>
-        <p className="mt-1 text-gray-500">Signed in as {learner.name} ({learner.email})</p>
-        <div className="mt-8 grid gap-4">
+
+        {/* Stats strip */}
+        {enrollments && enrollments.length > 0 && (
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="card p-4 text-center">
+              <div className="font-serif text-2xl font-bold text-hull">{enrollments.length}</div>
+              <div className="text-xs text-gray-400">Enrolled</div>
+            </div>
+            <div className="card p-4 text-center">
+              <div className="font-serif text-2xl font-bold text-amber-600">{inProgress}</div>
+              <div className="text-xs text-gray-400">In progress</div>
+            </div>
+            <div className="card p-4 text-center">
+              <div className="font-serif text-2xl font-bold text-teal">{done}</div>
+              <div className="text-xs text-gray-400">Completed</div>
+            </div>
+          </div>
+        )}
+
+        {/* Continue banner */}
+        {continueCourse && continueCourse.progress < 100 && (
+          <Link href={`/course/${continueCourse.course.id}/learn`}
+            className="mt-5 flex items-center justify-between gap-4 rounded-xl bg-hull p-5 text-white transition hover:opacity-95">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-white/60">Pick up where you left off</div>
+              <div className="mt-1 font-serif text-lg font-bold">{continueCourse.course.title}</div>
+              <div className="mt-1 text-xs text-white/60">{continueCourse.progress}% complete</div>
+            </div>
+            <span className="rounded-full bg-teal px-4 py-2 text-sm font-semibold flex-shrink-0">Continue →</span>
+          </Link>
+        )}
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {enrollments && enrollments.length === 0 && (
-            <p className="text-gray-500">No courses yet — <Link href="/catalog" className="text-teal underline">browse the catalogue</Link>.</p>
+            <p className="text-gray-500 col-span-2">No courses yet — <Link href="/catalog" className="text-teal underline">browse the catalogue</Link>.</p>
           )}
           {enrollments?.map((e) => (
-            <Link href={`/course/${e.course.id}/learn`} key={e.id} className="card block p-5 transition hover:-translate-y-0.5">
-              <div className="text-xs font-mono text-teal">{e.course.code}</div>
-              <h3 className="font-serif text-lg font-bold">{e.course.title}</h3>
-              <div className="mt-2 h-2 rounded-full bg-gray-100">
-                <div className="h-2 rounded-full bg-teal" style={{ width: `${e.progress}%` }} />
+            <Link href={`/course/${e.course.id}/learn`} key={e.id}
+              className="card flex items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+              <svg width="48" height="48" viewBox="0 0 48 48" className="flex-shrink-0">
+                <circle cx="24" cy="24" r={R} fill="none" stroke="#e5e7eb" strokeWidth="5" />
+                <circle cx="24" cy="24" r={R} fill="none" stroke={e.progress >= 100 ? "#12808c" : "#d97706"} strokeWidth="5" strokeLinecap="round"
+                  strokeDasharray={C} strokeDashoffset={C - (e.progress / 100) * C} transform="rotate(-90 24 24)" />
+                <text x="24" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0B2A3D">{e.progress}%</text>
+              </svg>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-mono text-teal">{e.course.code}</div>
+                <h3 className="font-serif font-bold leading-tight truncate">{e.course.title}</h3>
+                <div className="mt-1 text-xs">
+                  {e.progress >= 100
+                    ? <span className="rounded-full bg-teal/10 px-2 py-0.5 font-semibold text-teal">✓ Completed — certificate ready</span>
+                    : e.progress > 0
+                    ? <span className="text-amber-600 font-semibold">Continue learning →</span>
+                    : <span className="text-gray-400">Not started — begin →</span>}
+                </div>
               </div>
-              <div className="mt-1 text-xs text-gray-500">{e.progress}% complete</div>
             </Link>
           ))}
         </div>

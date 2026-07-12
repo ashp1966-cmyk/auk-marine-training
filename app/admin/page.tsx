@@ -3,86 +3,88 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ courses: 0, bookings: 0, learners: 0, revenue: 0, pending: 0 });
-  const [recent, setRecent] = useState<any[]>([]);
-  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/courses?all=1").then((r) => r.json()),
-      fetch("/api/bookings").then((r) => r.json()),
-      fetch("/api/sessions").then((r) => r.json()),
-    ]).then(([c, b, s]) => {
-      const bookings = b.bookings || [];
-      const revenue = bookings.filter((x: any) => x.status === "Paid").reduce((sum: number, x: any) => sum + x.amountCents, 0);
-      const pending = bookings.filter((x: any) => x.status === "Pending").length;
-      const learnerIds = new Set(bookings.map((x: any) => x.learnerId));
-      setStats({ courses: (c.courses || []).length, bookings: bookings.length, learners: learnerIds.size, revenue, pending });
-      setRecent(bookings.slice(0, 5));
-      const now = new Date();
-      setUpcoming((s.sessions || []).filter((x: any) => new Date(x.date) >= now).slice(0, 5));
-    });
+    fetch("/api/admin/stats", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (d.ok) setData(d); });
   }, []);
+
+  if (!data) return <div className="p-10 text-gray-400">Loading dashboard…</div>;
+
+  const s = data.stats;
+  const cards = [
+    { label: "Learners",        value: s.learners,                                     accent: "text-hull" },
+    { label: "LMS enrollments", value: s.enrollments,                                  accent: "text-hull" },
+    { label: "Completed",       value: s.completed,                                    accent: "text-teal" },
+    { label: "Completion rate", value: `${s.completionRate}%`,                         accent: "text-teal" },
+    { label: "Avg progress",    value: `${s.avgProgress}%`,                            accent: "text-amber-600" },
+    { label: "Revenue (paid)",  value: `R${(s.revenueCents / 100).toLocaleString()}`,  accent: "text-hull" },
+  ];
 
   return (
     <div>
       <h1 className="font-serif text-2xl font-bold">Dashboard</h1>
+      <p className="mt-1 text-sm text-gray-500">Live LMS performance at a glance.</p>
 
-      {/* Stats row */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {[
-          { label: "Courses", value: stats.courses, link: "/admin/courses" },
-          { label: "Bookings", value: stats.bookings, link: "/admin/bookings" },
-          { label: "Learners", value: stats.learners, link: "/admin/bookings" },
-          { label: "Pending payment", value: stats.pending, link: "/admin/bookings", highlight: stats.pending > 0 },
-          { label: "Revenue (paid)", value: `R${(stats.revenue / 100).toLocaleString()}`, link: "/admin/bookings" },
-        ].map((s) => (
-          <Link href={s.link} key={s.label} className={`card block p-4 transition hover:-translate-y-0.5 ${(s as any).highlight ? "ring-2 ring-amber-400" : ""}`}>
-            <div className="text-xs text-gray-400">{s.label}</div>
-            <div className="font-serif text-2xl font-bold text-hull">{s.value}</div>
-          </Link>
+      {/* Executive stat cards */}
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {cards.map((c) => (
+          <div key={c.label} className="card p-4 text-center">
+            <div className={`font-serif text-2xl font-bold ${c.accent}`}>{c.value}</div>
+            <div className="mt-0.5 text-xs text-gray-400">{c.label}</div>
+          </div>
         ))}
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        {/* Recent bookings */}
-        <div>
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Recent bookings</h2>
-            <Link href="/admin/bookings" className="text-xs text-teal hover:underline">View all →</Link>
-          </div>
-          <div className="card mt-2 divide-y">
-            {recent.map((b) => (
-              <div key={b.id} className="flex items-center justify-between p-3 text-sm">
-                <div>
-                  <div className="font-semibold">{b.learner?.name}</div>
-                  <div className="text-xs text-gray-400">{b.course?.title}</div>
+      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        {/* Per-course completion */}
+        <div className="card p-5">
+          <h2 className="font-semibold">Completion by course</h2>
+          <p className="text-xs text-gray-400">Top courses by enrollment — average learner progress</p>
+          <div className="mt-4 space-y-3">
+            {data.courseStats.length === 0 && <p className="text-sm text-gray-400">No enrollments yet.</p>}
+            {data.courseStats.map((c: any) => (
+              <div key={c.code}>
+                <div className="flex items-baseline justify-between text-sm">
+                  <span className="truncate font-medium">{c.title}</span>
+                  <span className="ml-2 flex-shrink-0 text-xs text-gray-400">{c.done}/{c.total} done · avg {c.avg}%</span>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${b.status === "Paid" ? "bg-green-100 text-green-700" : b.status === "Pending" ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
-                  {b.status}
-                </span>
+                <div className="mt-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-teal transition-all" style={{ width: `${c.avg}%` }} />
+                </div>
               </div>
             ))}
-            {recent.length === 0 && <p className="p-4 text-sm text-gray-400">No bookings yet.</p>}
           </div>
         </div>
 
-        {/* Upcoming sessions */}
-        <div>
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Upcoming sessions</h2>
-            <Link href="/admin/schedule" className="text-xs text-teal hover:underline">Schedule →</Link>
-          </div>
-          <div className="card mt-2 divide-y">
-            {upcoming.map((s) => (
-              <div key={s.id} className="p-3 text-sm">
-                <div className="font-semibold">{new Date(s.date).toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short" })}</div>
-                <div className="text-xs text-gray-400">{s.facilitator} · {s.mode} · {s.booked}/{s.capacity} booked</div>
+        {/* Recent enrollments */}
+        <div className="card p-5">
+          <h2 className="font-semibold">Recent LMS activity</h2>
+          <p className="text-xs text-gray-400">Latest enrollments and their progress</p>
+          <div className="mt-3 divide-y">
+            {data.recent.length === 0 && <p className="py-3 text-sm text-gray-400">No activity yet.</p>}
+            {data.recent.map((r: any, i: number) => (
+              <div key={i} className="flex items-center justify-between py-2.5 text-sm">
+                <div className="min-w-0">
+                  <div className="font-medium">{r.learner}</div>
+                  <div className="truncate text-xs text-gray-400">{r.course}</div>
+                </div>
+                <span className={`ml-3 flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${r.progress >= 100 ? "bg-teal/10 text-teal" : r.progress > 0 ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
+                  {r.progress}%
+                </span>
               </div>
             ))}
-            {upcoming.length === 0 && <p className="p-4 text-sm text-gray-400">No upcoming sessions — <Link href="/admin/schedule" className="text-teal underline">add one</Link>.</p>}
           </div>
         </div>
+      </div>
+
+      {/* Quick links */}
+      <div className="mt-6 flex flex-wrap gap-2">
+        {[["/admin/courses", "Manage courses"], ["/admin/bookings", "Bookings"], ["/admin/research", "Research"], ["/admin/categories", "Categories"], ["/admin/settings", "Settings"]].map(([href, label]) => (
+          <Link key={href} href={href} className="btn-ghost text-sm">{label} →</Link>
+        ))}
       </div>
     </div>
   );

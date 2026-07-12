@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
   const [admin, setAdmin]     = useState<{ signedIn: boolean; email?: string } | null>(null);
   const [learner, setLearner] = useState<{ signedIn: boolean; name?: string } | null>(null);
+  const pathname = usePathname();
 
   function checkAuth() {
     fetch("/api/auth/me", { credentials: "include" })
@@ -23,7 +25,7 @@ export default function Header() {
     // Re-check when user navigates back to this tab
     window.addEventListener("focus", checkAuth);
     return () => window.removeEventListener("focus", checkAuth);
-  }, []);
+  }, [pathname]); // re-check on every route change so the banner is always current
 
   return (
     <header className="sticky top-0 z-50 bg-hull text-white">
@@ -61,11 +63,13 @@ export default function Header() {
             </button>
           )}
 
-          {/* Admin button */}
-          <Link href="/admin"
-            className={`rounded-md border px-3 py-1.5 text-sm hover:bg-white/10 transition ${admin?.signedIn ? "border-teal bg-teal/20 text-white" : "border-white/20"}`}>
-            {admin?.signedIn ? `🔓 Admin` : "Admin sign-in"}
-          </Link>
+          {/* Admin button — hidden when a learner is signed in (learners have no admin role) */}
+          {(!learner?.signedIn || admin?.signedIn) && (
+            <Link href="/admin"
+              className={`rounded-md border px-3 py-1.5 text-sm hover:bg-white/10 transition ${admin?.signedIn ? "border-teal bg-teal/20 text-white" : "border-white/20"}`}>
+              {admin?.signedIn ? `🔓 Admin` : "Admin sign-in"}
+            </Link>
+          )}
         </div>
       </div>
 

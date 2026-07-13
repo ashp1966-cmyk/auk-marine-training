@@ -65,11 +65,24 @@ export async function GET(req: NextRequest, { params }: { params: { ref: string 
 <html>
 <head><title>Redirecting to PayFast…</title></head>
 <body style="font-family:sans-serif;text-align:center;padding:60px">
-  <p>Redirecting you to PayFast to complete payment…</p>
+  <p style="color:#666">Redirecting you to PayFast to complete payment…</p>
   <form id="pf" method="POST" action="${esc(actionUrl)}">
       ${inputs}
   </form>
-  <script>document.getElementById("pf").submit();</script>
+  <script>
+    try { document.getElementById("pf").submit(); }
+    catch(e) { document.getElementById("btn").style.display="inline-block"; }
+  </script>
+  <button id="btn" onclick="document.getElementById('pf').submit()"
+    style="display:none;margin-top:20px;background:#12808c;color:white;border:none;padding:14px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-weight:600">
+    Click here to continue to PayFast →
+  </button>
+  <noscript>
+    <button form="pf" type="submit"
+      style="margin-top:20px;background:#12808c;color:white;border:none;padding:14px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-weight:600">
+      Continue to PayFast →
+    </button>
+  </noscript>
 </body>
 </html>`;
 

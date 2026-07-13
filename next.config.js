@@ -31,8 +31,7 @@ const nextConfig = {
               "img-src 'self' data: *.public.blob.vercel-storage.com",
               // Fonts from self
               "font-src 'self'",
-              // Forms can submit to PayFast live and sandbox
-              "form-action 'self' https://www.payfast.co.za https://sandbox.payfast.co.za",
+              // No form-action restriction — PayFast requires POST from any page
               // Connections: self + our own API routes + YouTube embeds
               "connect-src 'self'",
               // Frames for YouTube course videos

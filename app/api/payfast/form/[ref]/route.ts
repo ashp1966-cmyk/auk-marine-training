@@ -63,26 +63,31 @@ export async function GET(req: NextRequest, { params }: { params: { ref: string 
 
     const html = `<!DOCTYPE html>
 <html>
-<head><title>Redirecting to PayFast…</title></head>
-<body style="font-family:sans-serif;text-align:center;padding:60px">
-  <p style="color:#666">Redirecting you to PayFast to complete payment…</p>
-  <form id="pf" method="POST" action="${esc(actionUrl)}">
-      ${inputs}
-  </form>
-  <script>
-    try { document.getElementById("pf").submit(); }
-    catch(e) { document.getElementById("btn").style.display="inline-block"; }
-  </script>
-  <button id="btn" onclick="document.getElementById('pf').submit()"
-    style="display:none;margin-top:20px;background:#12808c;color:white;border:none;padding:14px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-weight:600">
-    Click here to continue to PayFast →
-  </button>
-  <noscript>
-    <button form="pf" type="submit"
-      style="margin-top:20px;background:#12808c;color:white;border:none;padding:14px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-weight:600">
+<head>
+  <title>Continue to PayFast</title>
+  <meta http-equiv="Content-Security-Policy" content="form-action *;">
+</head>
+<body style="font-family:sans-serif;text-align:center;padding:60px;background:#f8fafc">
+  <div style="max-width:400px;margin:0 auto;background:white;border-radius:16px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+    <div style="font-size:48px">🔒</div>
+    <h2 style="color:#0B2A3D;font-family:Georgia,serif;margin:16px 0 8px">Secure Payment</h2>
+    <p style="color:#666;margin-bottom:8px">You are being redirected to PayFast to complete your payment securely.</p>
+    <p style="color:#888;font-size:14px;margin-bottom:28px">${esc(rawFields.item_name || "")}</p>
+    <form id="pf" method="POST" action="${esc(actionUrl)}">
+        ${inputs}
+    </form>
+    <button onclick="document.getElementById('pf').submit()"
+      style="background:#12808c;color:white;border:none;padding:16px 40px;border-radius:10px;font-size:16px;cursor:pointer;font-weight:700;width:100%;letter-spacing:0.3px">
       Continue to PayFast →
     </button>
-  </noscript>
+    <p style="color:#aaa;font-size:12px;margin-top:16px">Powered by PayFast · Secured by SSL</p>
+  </div>
+  <script>
+    // Small delay then auto-submit — gives browser time to apply CSP from meta tag
+    setTimeout(function() {
+      try { document.getElementById("pf").submit(); } catch(e) {}
+    }, 800);
+  </script>
 </body>
 </html>`;
 

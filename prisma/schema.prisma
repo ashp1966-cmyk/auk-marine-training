@@ -52,7 +52,7 @@ model Course {
   practical     Json       @default("{}") // {title, description}
   quiz          Json       @default("[]") // [{q, options[], answer}]
   featured      Boolean    @default(false)
-  published     Boolean    @default(true)
+  published     Boolean    @default(false)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   sessions      Session[]

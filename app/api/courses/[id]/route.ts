@@ -63,3 +63,15 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   await prisma.course.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }
+
+// PATCH — toggle published status only (quick publish/unpublish)
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ ok: false, error: "Not signed in" }, { status: 401 });
+  const { published } = await req.json();
+  const course = await prisma.course.update({
+    where: { id: params.id },
+    data: { published: Boolean(published) },
+  });
+  return NextResponse.json({ ok: true, course });
+}

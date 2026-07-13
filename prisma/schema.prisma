@@ -58,6 +58,7 @@ model Course {
   sessions      Session[]
   bookings      Booking[]
   enrollments   Enrollment[]
+  certificates  Certificate[]
 }
 
 model Session {
@@ -84,6 +85,7 @@ model Learner {
   createdAt    DateTime     @default(now())
   bookings     Booking[]
   enrollments  Enrollment[]
+  certificates Certificate[]
 }
 
 model Booking {
@@ -214,4 +216,19 @@ model ResearchInterest {
   org       String   @default("")
   message   String   @default("")
   createdAt DateTime @default(now())
+}
+
+// Issued certificate record — one per learner per course, never deleted.
+// The verifyToken is the public proof-of-authenticity identifier embedded
+// in the QR code on the PDF.
+model Certificate {
+  id          String   @id @default(cuid())
+  learnerId   String
+  learner     Learner  @relation(fields: [learnerId], references: [id])
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  verifyToken String   @unique @default(cuid())
+  issuedAt    DateTime @default(now())
+
+  @@unique([learnerId, courseId])
 }

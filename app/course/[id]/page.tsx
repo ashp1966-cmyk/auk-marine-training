@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import BookingForm from "@/components/BookingForm";
+import { getLearnerSession } from "@/lib/learnerAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,17 @@ export default async function CoursePage({ params }: { params: { id: string } })
   });
   if (!course) return notFound();
 
-  const settings = await prisma.siteSettings.findUnique({ where: { id: "singleton" } });
+  const [settings, session] = await Promise.all([
+    prisma.siteSettings.findUnique({ where: { id: "singleton" } }),
+    getLearnerSession(),
+  ]);
+
+  // Check if learner is already enrolled
+  const enrollment = session
+    ? await prisma.enrollment.findUnique({
+        where: { learnerId_courseId: { learnerId: session.learnerId, courseId: course.id } },
+      })
+    : null;
 
   const outcomes = (course.outcomes as string[]) || [];
   const modules  = (course.modules as { title: string; content: string }[]) || [];
@@ -51,13 +62,17 @@ export default async function CoursePage({ params }: { params: { id: string } })
             </div>
           </div>
 
-          {/* Booking card — shown inline on desktop inside the hero on large screens */}
+          {/* Sidebar: enrolled learners go straight to LMS, others see booking form */}
           <div className="hidden lg:block">
             <div className="rounded-xl overflow-hidden shadow-xl">
               {thumb
                 ? <img src={thumb} alt={course.title} className="h-40 w-full object-cover" />
                 : <div className="h-40 bg-gradient-to-br from-teal to-hull" />}
-              <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />
+              {enrollment ? (
+                <EnrolledCard courseId={course.id} progress={enrollment.progress} />
+              ) : (
+                <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />
+              )}
             </div>
             <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
               Preview in LMS →
@@ -66,10 +81,14 @@ export default async function CoursePage({ params }: { params: { id: string } })
         </div>
       </div>
 
-      {/* Mobile booking card */}
+      {/* Mobile booking/enrolled card */}
       <div className="mx-auto max-w-xl px-5 pt-6 lg:hidden">
         {thumb && <img src={thumb} alt={course.title} className="h-40 w-full rounded-xl object-cover mb-4" />}
-        <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />
+        {enrollment ? (
+          <EnrolledCard courseId={course.id} progress={enrollment.progress} />
+        ) : (
+          <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />
+        )}
         <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
           Preview in LMS →
         </Link>
@@ -136,5 +155,37 @@ export default async function CoursePage({ params }: { params: { id: string } })
         <div className="hidden lg:block" />
       </div>
     </main>
+  );
+}
+
+// Shown instead of the booking form when the learner is already enrolled
+function EnrolledCard({ courseId, progress }: { courseId: string; progress: number }) {
+  const R = 24, C = 2 * Math.PI * R;
+  return (
+    <div className="bg-white p-6 text-center">
+      <div className="flex items-center justify-center gap-4 mb-4">
+        <svg width="60" height="60" viewBox="0 0 60 60">
+          <circle cx="30" cy="30" r={R} fill="none" stroke="#e5e7eb" strokeWidth="5" />
+          <circle cx="30" cy="30" r={R} fill="none" stroke="#12808c" strokeWidth="5"
+            strokeLinecap="round" strokeDasharray={C}
+            strokeDashoffset={C - (progress / 100) * C}
+            transform="rotate(-90 30 30)" />
+          <text x="30" y="35" textAnchor="middle" fontSize="13" fontWeight="700" fill="#0B2A3D">{progress}%</text>
+        </svg>
+        <div className="text-left">
+          <div className="font-semibold text-hull">
+            {progress >= 100 ? "✓ Completed!" : progress > 0 ? "In progress" : "Not started"}
+          </div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {progress >= 100 ? "Certificate ready to download" : `${progress}% complete`}
+          </div>
+        </div>
+      </div>
+      <Link href={`/course/${courseId}/learn`}
+        className="block w-full rounded-lg bg-teal py-3 text-center font-bold text-white hover:bg-teal/90 transition">
+        {progress > 0 ? "Continue learning →" : "Start course →"}
+      </Link>
+      <p className="mt-3 text-xs text-gray-400">You have full access to this course</p>
+    </div>
   );
 }

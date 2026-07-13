@@ -12,12 +12,21 @@ export default function BookingForm({ course }: { course: any }) {
   const [error, setError]     = useState("");
   const [ref, setRef]         = useState("");
 
-  // Pre-fill from learner session if signed in
+  // Pre-fill from learner session if signed in, and check if already enrolled
   useEffect(() => {
     fetch("/api/learner/me", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
-        if (d.signedIn) { setName(d.learner.name); setEmail(d.learner.email); }
+        if (d.signedIn) {
+          setName(d.learner.name);
+          setEmail(d.learner.email);
+          // Check if already enrolled — if so redirect straight to LMS
+          fetch(`/api/enrollments?learnerId=${d.learner.id}&courseId=${course.id}`, { credentials: "include" })
+            .then((r) => r.json())
+            .then((e) => {
+              if (e.enrolled) window.location.href = `/course/${course.id}/learn`;
+            }).catch(() => {});
+        }
       }).catch(() => {});
   }, []);
 

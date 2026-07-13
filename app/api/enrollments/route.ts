@@ -23,6 +23,17 @@ export async function POST(req: NextRequest) {
 // A real production build should put learners behind their own login too —
 // this MVP identifies them by email, matching how bookings already work.
 export async function GET(req: NextRequest) {
+  const learnerId = req.nextUrl.searchParams.get("learnerId");
+  const courseId  = req.nextUrl.searchParams.get("courseId");
+
+  // Single enrollment check — used by BookingForm and course page
+  if (learnerId && courseId) {
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { learnerId_courseId: { learnerId, courseId } },
+    });
+    return NextResponse.json({ ok: true, enrolled: !!enrollment, enrollment: enrollment || null });
+  }
+
   const email = req.nextUrl.searchParams.get("email");
   if (!email) return NextResponse.json({ ok: false, error: "email required" }, { status: 400 });
   const learner = await prisma.learner.findUnique({ where: { email } });

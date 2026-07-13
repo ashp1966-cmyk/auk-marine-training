@@ -35,13 +35,21 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const { learnerId, courseId, progress, quizScore, completedModules } = await req.json();
+  const { learnerId, courseId, progress, quizScore, completedModules, notes } = await req.json();
   if (!learnerId || !courseId) return NextResponse.json({ ok: false, error: "Missing ids" }, { status: 400 });
+
+  // Partial update — only touch fields actually sent, so a notes-only
+  // autosave never wipes progress, and progress saves never wipe notes.
+  const data: Record<string, any> = {};
+  if (progress         !== undefined) data.progress         = progress;
+  if (quizScore        !== undefined) data.quizScore        = quizScore;
+  if (completedModules !== undefined) data.completedModules = completedModules;
+  if (notes            !== undefined) data.notes            = String(notes).slice(0, 20000);
 
   const enrollment = await prisma.enrollment.upsert({
     where: { learnerId_courseId: { learnerId, courseId } },
-    update: { progress, quizScore, completedModules },
-    create: { learnerId, courseId, progress: progress ?? 0, quizScore, completedModules: completedModules ?? [] },
+    update: data,
+    create: { learnerId, courseId, progress: progress ?? 0, quizScore, completedModules: completedModules ?? [], notes: notes ?? "" },
   });
   return NextResponse.json({ ok: true, enrollment });
 }

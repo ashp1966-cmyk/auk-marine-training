@@ -23,7 +23,22 @@ export default function CoursePlayer() {
   const [started, setStarted]       = useState(false);
   const [navOpen, setNavOpen]       = useState(false);
   const [saving, setSaving]         = useState(false);
+  const [notes, setNotes]           = useState("");
+  const [notesOpen, setNotesOpen]   = useState(false);
+  const [notesSaved, setNotesSaved] = useState(true);
+  const notesTimer = useRef<any>(null);
   const didResume = useRef(false);
+
+  // Restore mid-quiz answers from localStorage (survives refresh)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem(`auk-quiz-${id}`);
+    if (saved) { try { setQuizAnswers(JSON.parse(saved)); } catch {} }
+  }, [id]);
+  useEffect(() => {
+    if (typeof window !== "undefined" && Object.keys(quizAnswers).length)
+      localStorage.setItem(`auk-quiz-${id}`, JSON.stringify(quizAnswers));
+  }, [quizAnswers, id]);
 
   useEffect(() => {
     fetch(`/api/courses/${id}`).then((r) => r.json()).then((d) => setCourse(d.course));
@@ -100,6 +115,25 @@ export default function CoursePlayer() {
     );
   }
 
+  // Load saved notes once enrollment arrives
+  useEffect(() => {
+    if (enrollment?.notes !== undefined && notes === "") setNotes(enrollment.notes || "");
+  }, [enrollment?.id]);
+
+  // Debounced notes autosave — writes to the database 1.2s after typing stops
+  function onNotesChange(v: string) {
+    setNotes(v);
+    setNotesSaved(false);
+    clearTimeout(notesTimer.current);
+    notesTimer.current = setTimeout(async () => {
+      await fetch("/api/enrollments", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ learnerId: enrollment.learnerId, courseId: id, notes: v }),
+      });
+      setNotesSaved(true);
+    }, 1200);
+  }
+
   function isDone(it: Item) {
     if (it.kind === "quiz") return enrollment.quizScore != null && enrollment.quizScore >= 60;
     if (it.kind === "cert") return enrollment.progress >= 100;
@@ -139,6 +173,7 @@ export default function CoursePlayer() {
     const score = Math.round((correct / quiz.length) * 100);
     setQuizChecked(true);
     setRetaking(false);
+    if (typeof window !== "undefined") localStorage.removeItem(`auk-quiz-${id}`);
     await persist(completed, score);
   }
 
@@ -337,6 +372,31 @@ export default function CoursePlayer() {
                   </ul>
                 </div>
               )
+            )}
+          </div>
+
+          {/* My notes — auto-saves to the learner's enrollment, kept forever */}
+          <div className="mt-4 card overflow-hidden">
+            <button onClick={() => setNotesOpen(!notesOpen)}
+              className="flex w-full items-center justify-between px-5 py-3 text-sm font-semibold hover:bg-gray-50 transition">
+              <span>📝 My notes {notes && !notesOpen ? <span className="ml-2 text-xs font-normal text-gray-400">({notes.length} chars)</span> : null}</span>
+              <span className="flex items-center gap-3">
+                <span className={`text-xs font-normal ${notesSaved ? "text-teal" : "text-amber-500"}`}>
+                  {notesSaved ? "✓ Saved" : "Saving…"}
+                </span>
+                {notesOpen ? "▲" : "▼"}
+              </span>
+            </button>
+            {notesOpen && (
+              <div className="border-t border-gray-100 p-4">
+                <textarea
+                  rows={6}
+                  value={notes}
+                  onChange={(e) => onNotesChange(e.target.value)}
+                  placeholder="Jot down anything as you learn — key points, questions, reminders. Your notes auto-save and stay here forever, even after you complete the course."
+                  className="w-full rounded-md border border-gray-200 p-3 text-sm leading-relaxed focus:border-teal focus:outline-none"
+                />
+              </div>
             )}
           </div>
 

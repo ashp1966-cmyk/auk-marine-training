@@ -112,6 +112,7 @@ model Enrollment {
   progress         Int      @default(0)
   quizScore        Int?
   completedModules Json     @default("[]")
+  notes            String   @default("") // learner's personal course notes — auto-saved
   createdAt        DateTime @default(now())
 
   @@unique([learnerId, courseId])

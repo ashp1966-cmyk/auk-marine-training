@@ -132,4 +132,35 @@ lib/auth.ts        → admin session creation/verification
 lib/payfast.ts     → PayFast signature build + ITN verification
 prisma/schema.prisma → the real database structure
 prisma/seed.ts     → starter data (AUK's courses, provider, facilitators)
+prisma/courses/    → fully-authored course content (see below)
 ```
+
+## Course content authoring
+
+Starter courses are seeded with generic placeholder lessons and an empty quiz
+via `prisma/seed.ts`. Fully-authored courses — real lessons, a graded quiz,
+and (where relevant) a practical demonstration built from an actual client
+audit or case — live as standalone files under `prisma/courses/` and are
+layered on top of the placeholder via a `prisma.course.updateMany()` call in
+the seed script, keyed by course `code`. This keeps `seed.ts` itself readable
+while allowing individual courses to carry substantially more content than
+the generic scaffold.
+
+Currently authored:
+
+- **AUK SPM 015 — ISM, MLC & ISPS Auditor** (`prisma/courses/auk-spm-015.ts`):
+  12 modules covering the IMO framework, ISM/MLC/ISPS structure, audit
+  technique, and a practical demonstration built from a real (anonymised)
+  combined ISM/MLC/ISPS internal audit of a pure car carrier in Durban.
+  16-question quiz, 75% pass mark.
+
+See `CLAUDE.md` for the content-authoring conventions (client document
+handling, anonymisation rules, and the seed pattern) followed when building
+these.
+
+## Environment note
+
+This project's installed `tsx` does not auto-load `.env`. All `tsx`-based
+npm scripts (`db:seed`, etc.) are wired with `--env-file=.env` explicitly in
+`package.json`. If you add a new script that invokes `tsx` directly, add the
+same flag.

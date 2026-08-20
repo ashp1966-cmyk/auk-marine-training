@@ -9,12 +9,12 @@ export default function Header() {
   const pathname = usePathname();
 
   function checkAuth() {
-    fetch("/api/auth/me", { credentials: "include", cache: "no-store" })
+    fetch("/api/auth/me", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setAdmin({ signedIn: !!d.signedIn, email: d.email }))
       .catch(() => setAdmin({ signedIn: false }));
 
-    fetch("/api/learner/me", { credentials: "include", cache: "no-store" })
+    fetch("/api/learner/me", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setLearner({ signedIn: !!d.signedIn, name: d.learner?.name }))
       .catch(() => setLearner({ signedIn: false }));
@@ -24,14 +24,7 @@ export default function Header() {
     checkAuth();
     // Re-check when user navigates back to this tab
     window.addEventListener("focus", checkAuth);
-    // Re-check the instant a login/logout happens anywhere on the page,
-    // even if the URL doesn't change (e.g. /admin swaps its own internal
-    // view from "login form" to "dashboard" without a route change).
-    window.addEventListener("auth-changed", checkAuth);
-    return () => {
-      window.removeEventListener("focus", checkAuth);
-      window.removeEventListener("auth-changed", checkAuth);
-    };
+    return () => window.removeEventListener("focus", checkAuth);
   }, [pathname]); // re-check on every route change so the banner is always current
 
   return (
@@ -63,7 +56,6 @@ export default function Header() {
               onClick={async () => {
                 await fetch("/api/learner/logout", { method: "POST" });
                 setLearner({ signedIn: false });
-                window.dispatchEvent(new Event("auth-changed"));
                 window.location.href = "/";
               }}
               className="hidden sm:block text-xs text-white/60 hover:text-white">
@@ -94,7 +86,6 @@ export default function Header() {
                 onClick={async () => {
                   await fetch("/api/learner/logout", { method: "POST" });
                   setLearner({ signedIn: false });
-                  window.dispatchEvent(new Event("auth-changed"));
                   window.location.href = "/";
                 }}
                 className="underline hover:no-underline ml-1">

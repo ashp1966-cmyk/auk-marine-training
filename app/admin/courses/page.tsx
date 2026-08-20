@@ -6,14 +6,17 @@ const CATEGORIES = ["Maritime","IT","Automation","Business","Finance","Mining","
 
 export default function AdminCourses() {
   const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter]   = useState<"all"|"published"|"draft">("all");
   const [cat, setCat]         = useState("all");
   const [search, setSearch]   = useState("");
 
   function load() {
+    setLoading(true);
     fetch("/api/courses?all=1", { credentials: "include" })
       .then((r) => r.json())
-      .then((d) => setCourses(d.courses || []));
+      .then((d) => setCourses(d.courses || []))
+      .finally(() => setLoading(false));
   }
   useEffect(() => { load(); }, []);
 
@@ -44,6 +47,21 @@ export default function AdminCourses() {
 
   const published = courses.filter((c) => c.published).length;
   const drafts    = courses.filter((c) => !c.published).length;
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-serif text-2xl font-bold">Courses</h1>
+            <p className="text-sm text-gray-400 mt-0.5">Loading courses…</p>
+          </div>
+          <Link href="/admin/courses/new" className="btn-primary">+ New course</Link>
+        </div>
+        <div className="card mt-4 p-10 text-center text-gray-400">Loading courses…</div>
+      </div>
+    );
+  }
 
   return (
     <div>

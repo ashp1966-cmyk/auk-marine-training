@@ -20,6 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const data = await res.json();
     setProviderId(data.providerId ?? null);
     setStatus(data.setupNeeded ? "setup" : data.signedIn ? "in" : "login");
+    return data;
   }
 
   useEffect(() => { refresh(); }, []);
@@ -31,7 +32,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const res = await fetch("/api/auth/setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
     const data = await res.json();
     if (!data.ok) return setError(data.error);
-    refresh();
+    await refresh();
+    window.dispatchEvent(new Event("auth-changed"));
+    router.push("/admin/settings");
   }
 
   async function doLogin() {
@@ -39,11 +42,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
     const data = await res.json();
     if (!data.ok) return setError(data.error);
-    refresh();
+    await refresh();
+    // Let the header know immediately — it listens on window focus and route
+    // changes, but logging in doesn't necessarily do either on its own.
+    window.dispatchEvent(new Event("auth-changed"));
+    router.push("/admin/settings");
   }
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
+    window.dispatchEvent(new Event("auth-changed"));
     router.push("/");
     refresh();
   }

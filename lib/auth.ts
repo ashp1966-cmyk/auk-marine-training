@@ -34,7 +34,7 @@ export async function createAdminSession(adminId: string, email: string, provide
 
   cookies().set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_HOURS * 60 * 60,

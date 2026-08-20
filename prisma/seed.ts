@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { aukSpm015 } from "./courses/auk-spm-015";
 const prisma = new PrismaClient();
 
 // Prices in cents (ZAR). Learnership / NQF unit standards = 0 (state-funded).
@@ -106,6 +107,19 @@ async function main() {
     { code: "AUK SPM 023", title: "Freight Forwarding",                                  durationLabel: "2 days", price: P.day2                   },
   ];
   for (const c of maritime) await upsertCourse({ ...c, category: "Maritime" });
+
+  // ─── Real content for AUK SPM 015 (overwrites the generic placeholder) ───────
+  await prisma.course.updateMany({
+    where: { code: "AUK SPM 015" },
+    data: {
+      modules: aukSpm015.modules,
+      quiz: aukSpm015.quiz,
+      practical: {
+        title: "Practical Demonstration: A Real Car Carrier Audit",
+        description: "Grade and report on a real ISM/MLC/ISPS internal audit — plan the audit, sequence a checklist, grade nine real observations, and identify which is not a finding at all.",
+      },
+    },
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // INFORMATION TECHNOLOGY

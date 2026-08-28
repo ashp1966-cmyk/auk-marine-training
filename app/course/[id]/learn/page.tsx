@@ -99,6 +99,17 @@ export default function CoursePlayer() {
     if (started && typeof window !== "undefined") localStorage.setItem(`auk-pos-${id}`, String(active));
   }, [active, started, id]);
 
+  // FIX: this hook was previously declared AFTER the `if (!started) return ...`
+  // early return below, which violates the Rules of Hooks — the number of
+  // hooks called changed between renders (fewer while !started, one more once
+  // started flips true), which is exactly what triggers
+  // "Error: Minified React error #310 — Rendered more hooks than during the
+  // previous render." Moved here, above every early return, so every render
+  // always calls exactly the same hooks in the same order.
+  useEffect(() => {
+    if (enrollment?.notes !== undefined && notes === "") setNotes(enrollment.notes || "");
+  }, [enrollment?.id]);
+
   if (!course) return <div className="p-10 text-gray-400">Loading…</div>;
 
   if (!started) {
@@ -114,11 +125,6 @@ export default function CoursePlayer() {
       </main>
     );
   }
-
-  // Load saved notes once enrollment arrives
-  useEffect(() => {
-    if (enrollment?.notes !== undefined && notes === "") setNotes(enrollment.notes || "");
-  }, [enrollment?.id]);
 
   // Debounced notes autosave — writes to the database 1.2s after typing stops
   function onNotesChange(v: string) {

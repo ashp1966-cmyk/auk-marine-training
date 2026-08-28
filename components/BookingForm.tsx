@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 
+// Explicit input styling — forces visible dark text on a white background
+// regardless of what the global .field CSS or the browser's dark-mode/colour
+// scheme is doing. This directly fixes "text typed in white, invisible" bugs.
+const inputCls = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal";
+const labelCls = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500";
+
 export default function BookingForm({ course }: { course: any }) {
   const [step, setStep]       = useState(1);
   const [name, setName]       = useState("");
@@ -87,17 +93,21 @@ export default function BookingForm({ course }: { course: any }) {
       )}
 
       <div className="mt-4 space-y-3">
-        <div className="field"><label>Full name *</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
+        <div>
+          <label className={labelCls}>Full name *</label>
+          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
         </div>
-        <div className="field"><label>Email *</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" />
+        <div>
+          <label className={labelCls}>Email *</label>
+          <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" />
         </div>
-        <div className="field"><label>Phone</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+27 …" />
+        <div>
+          <label className={labelCls}>Phone</label>
+          <input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+27 …" />
         </div>
-        <div className="field"><label>Organisation</label>
-          <input value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Company / institution" />
+        <div>
+          <label className={labelCls}>Organisation</label>
+          <input className={inputCls} value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Company / institution" />
         </div>
         <label className="flex gap-2 text-xs text-gray-600 leading-relaxed">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 flex-shrink-0" />

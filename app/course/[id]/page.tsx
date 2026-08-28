@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import BookingForm from "@/components/BookingForm";
 import { getLearnerSession } from "@/lib/learnerAuth";
+import { getAdminSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +14,10 @@ export default async function CoursePage({ params }: { params: { id: string } })
   });
   if (!course) return notFound();
 
-  const [settings, session] = await Promise.all([
+  const [settings, session, adminSession] = await Promise.all([
     prisma.siteSettings.findUnique({ where: { id: "singleton" } }),
     getLearnerSession(),
+    getAdminSession(),
   ]);
 
   // Check if learner is already enrolled
@@ -32,6 +34,13 @@ export default async function CoursePage({ params }: { params: { id: string } })
 
   // Total estimated duration from modules
   const totalMins = modules.reduce((s, m) => s + Math.max(2, Math.round((m.content || "").split(/\s+/).length / 180)), 0);
+
+  // Decide which sidebar card to show — admins never see the payment form
+  function SidebarCard() {
+    if (adminSession) return <AdminPreviewCard courseId={course.id} published={course.published} />;
+    if (enrollment)   return <EnrolledCard courseId={course.id} progress={enrollment.progress} />;
+    return <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />;
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -62,17 +71,13 @@ export default async function CoursePage({ params }: { params: { id: string } })
             </div>
           </div>
 
-          {/* Sidebar: enrolled learners go straight to LMS, others see booking form */}
+          {/* Sidebar: admin → preview card, enrolled learner → LMS card, else → booking form */}
           <div className="hidden lg:block">
             <div className="rounded-xl overflow-hidden shadow-xl">
               {thumb
                 ? <img src={thumb} alt={course.title} className="h-40 w-full object-cover" />
                 : <div className="h-40 bg-gradient-to-br from-teal to-hull" />}
-              {enrollment ? (
-                <EnrolledCard courseId={course.id} progress={enrollment.progress} />
-              ) : (
-                <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />
-              )}
+              <SidebarCard />
             </div>
             <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
               Preview in LMS →
@@ -81,14 +86,10 @@ export default async function CoursePage({ params }: { params: { id: string } })
         </div>
       </div>
 
-      {/* Mobile booking/enrolled card */}
+      {/* Mobile card */}
       <div className="mx-auto max-w-xl px-5 pt-6 lg:hidden">
         {thumb && <img src={thumb} alt={course.title} className="h-40 w-full rounded-xl object-cover mb-4" />}
-        {enrollment ? (
-          <EnrolledCard courseId={course.id} progress={enrollment.progress} />
-        ) : (
-          <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />
-        )}
+        <SidebarCard />
         <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
           Preview in LMS →
         </Link>
@@ -186,6 +187,33 @@ function EnrolledCard({ courseId, progress }: { courseId: string; progress: numb
         {progress > 0 ? "Continue learning →" : "Start course →"}
       </Link>
       <p className="mt-3 text-xs text-gray-400">You have full access to this course</p>
+    </div>
+  );
+}
+
+// Shown instead of the booking form when an ADMIN is viewing the course.
+// Admins manage courses, not buy them — no payment form should ever appear.
+function AdminPreviewCard({ courseId, published }: { courseId: string; published: boolean }) {
+  return (
+    <div className="bg-white p-6 text-center">
+      <div className="text-3xl mb-2">🔓</div>
+      <div className="font-semibold text-hull">Admin view</div>
+      <p className="mt-1 text-xs text-gray-400">
+        You're viewing this as an admin — the payment form is hidden for admin accounts.
+      </p>
+      <div className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-bold ${published ? "bg-teal/10 text-teal" : "bg-amber-100 text-amber-700"}`}>
+        {published ? "✓ Live — visible to learners" : "⚪ Draft — hidden from learners"}
+      </div>
+      <div className="mt-4 space-y-2">
+        <Link href={`/course/${courseId}/learn`}
+          className="block w-full rounded-lg bg-teal py-2.5 text-center text-sm font-bold text-white hover:bg-teal/90 transition">
+          Preview in LMS →
+        </Link>
+        <Link href={`/admin/courses/${courseId}`}
+          className="block w-full rounded-lg border border-gray-200 py-2.5 text-center text-sm font-semibold text-gray-600 hover:border-teal hover:text-teal transition">
+          Edit this course →
+        </Link>
+      </div>
     </div>
   );
 }

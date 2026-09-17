@@ -41,8 +41,10 @@ export default async function Home() {
           <div className="mt-10 flex flex-wrap gap-6 text-sm text-white/60">
             <span>✓ {allCourses.length}+ courses</span>
             <span>✓ Self-paced online</span>
-            <span>✓ TETA accredited</span>
-            <span>✓ PDF certificates</span>
+            {/* "PDF certificates" until PDF generation exists — a learner currently
+                gets a web page. "Verifiable" is true today: every certificate carries
+                a sequential number and a public verification page. */}
+            <span>✓ Verifiable certificates</span>
           </div>
         </div>
       </section>
@@ -121,9 +123,12 @@ export default async function Home() {
               <div className="font-serif text-3xl font-bold text-hull">800+</div>
               <div className="mt-1 text-sm text-gray-500">Learners trained nationally</div>
             </div>
+            {/* Replaces a "TETA" panel — that accreditation is not currently held
+                and the claim was also removed from the footer, the certificate
+                template and the verification page. */}
             <div>
-              <div className="font-serif text-3xl font-bold text-hull">TETA</div>
-              <div className="mt-1 text-sm text-gray-500">Accredited training service provider</div>
+              <div className="font-serif text-3xl font-bold text-hull">6</div>
+              <div className="mt-1 text-sm text-gray-500">Maritime programmes with platform access</div>
             </div>
           </div>
         </div>

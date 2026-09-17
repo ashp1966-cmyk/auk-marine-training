@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { email, password } = await req.json();
-  const learner = await prisma.learner.findUnique({ where: { email: (email || "").trim() } });
+  const learner = await prisma.learner.findUnique({ where: { email: String(email ?? "").trim().toLowerCase() } });
   const valid = learner?.passwordHash ? await verifyPassword(password || "", learner.passwordHash) : false;
 
   if (!valid) {

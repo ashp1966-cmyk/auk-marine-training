@@ -89,6 +89,9 @@ export async function POST(req: NextRequest) {
       courseTitle: enrollment.course.title,
       courseCode: enrollment.course.code,
       deliveryMode: "Held Online",
+      // Self-paced online: the "course" ran from enrolment to completion, which
+      // is what the printed date range shows.
+      startedOn: enrollment.createdAt,
       completedOn: new Date(),
       score: enrollment.quizScore,
     },

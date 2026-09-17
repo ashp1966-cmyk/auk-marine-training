@@ -4,8 +4,15 @@
  *
  * Drop-in for prisma/seed.ts. `modules` and `quiz` are stored as JSON on the
  * Course record, matching the shapes the course player already reads:
- *   modules: { title: string; content: string }[]
- *   quiz:    { q: string; options: string[]; answer: number }[]  // answer = 0-based index
+ *   modules:   { title: string; content: string }[]
+ *   quiz:      { q: string; options: string[]; answer: number }[]  // answer = 0-based index
+ *   practical: { title: string; description: string }
+ *
+ * v2 — adds Module 13 (audit process protocol: notification, meetings, report
+ * timelines, close-out evidence), 14 further quiz questions including the five
+ * finding-classification scenarios, and the summary / outcomes / practical
+ * exports that were previously missing, so the seed block can populate those
+ * columns.
  */
 
 export const aukSpm015Modules = [
@@ -218,6 +225,55 @@ An **observation** is a statement of fact substantiated by objective evidence th
 
 Complete the quiz and this demonstration to be issued your certificate.`,
   },
+  {
+    title: "13. Running the Audit: Notification, Meetings and Close-Out",
+    content: `Modules 9 to 11 covered how to audit. This one covers the procedural discipline around it — the part that determines whether your findings survive contact with a superintendent, a flag State or a court.
+
+**Notification.** Give the vessel at least two weeks. The notification states the scope (ISM, ISPS, MLC or combined), the dates and expected duration, the auditor's name and the authority under which they audit, and the documents to be made available. A vessel that is ambushed produces defensive answers and hastily assembled paperwork, which is worse evidence, not better.
+
+**Announced or unannounced.** Both are legitimate and the annual programme should contain both. Announced audits get you depth — the records are out, the people are available, you cover more ground. Unannounced audits get you reality, and are particularly worth doing where rest hours are the concern, because a rest-hour system that is real looks the same on any day of the week and one that is manufactured does not.
+
+**The opening meeting.** Brief, with the master and relevant heads of department. Confirm the scope, the process, the expected duration, and that the vessel will see the findings before the report is issued. Say plainly that the audit is a quality review rather than a disciplinary exercise, and then behave as though it is.
+
+The tone of this meeting sets the tone of the audit. An auditor who opens confrontationally gets a defensive crew, guarded answers and documents produced one at a time. An auditor who opens as a professional colleague gets shown the things that are actually wrong. Your attitude determines the quality of the evidence you receive, which means it determines the quality of the audit.
+
+**Evidence by three methods, always all three.** Document review tells you what should happen. Interview tells you what people believe happens — ask "walk me through what happens when you need to enter the void space under number two hold", never "is the enclosed space procedure followed?". Observation tells you what actually happens: a toolbox talk, a watch handover, a drill. The gaps between the three are where the findings are.
+
+**The closing meeting.** Present the draft findings and their grades to the master before you leave, and give him the opportunity to produce evidence or context you did not have. Correct genuine factual errors. Do not change a grading because the room is uncomfortable — a grade you softened under social pressure is a grade you will have to defend later without the pressure to explain it. Record the master's comments in the report whether or not you agree with them.
+
+**The report.** Within five working days. Every non-conformity and major non-conformity carries a Non-Conformance Report stating the requirement not met with its specific Code reference, the objective evidence, the agreed corrective action, the responsible person and the target close-out date. An NCR missing any one of those cannot be closed out, because there is nothing definite to verify against.
+
+**Close-out.** The audit is not finished when the report is issued. It is finished when the findings are closed, and closure requires objective evidence that the action was implemented — not that it was planned. A revised procedure with signatures. A training record. A maintenance entry. A photograph of the physical repair. "Confirmed complete by the master" is not close-out evidence.
+
+**Why the timelines matter commercially.** An open non-conformity from your own internal audit, found by port State control before you closed it, becomes a PSC deficiency and possibly a detention. You identified the problem, documented it, and then left it sitting where an inspector could find it. That is a worse position than never having audited, because the record shows you knew.
+
+**The four-stage cycle, documented at each stage.**
+
+| Stage | Activities | Output |
+| --- | --- | --- |
+| Plan | Scope, criteria, checklist, notification | Audit plan and notification letter |
+| Conduct | Opening meeting, documents, interviews, observation, closing meeting | Completed checklist, finding notes |
+| Report | Grade findings, write NCRs, issue report | Audit report, NCR forms |
+| Follow-up | Corrective action, evidence review, verification | Corrective action record, close-out sign-off |
+
+A stage without its output document did not happen, as far as anyone reading the file afterwards is concerned.
+
+---
+
+## Working a full audit on the AUK audit platform
+
+This course has taught the method. The complete question set — ISM, ISPS, MLC and Q-SET scopes, structured the way an audit actually runs — sits on the AUK ship internal audit platform, together with the findings register, non-conformity classification and report generation described in Modules 11 and 13.
+
+Access is available to learners on request.
+
+**To request access:** email **info@auk-maritime.com**
+
+**Platform:** https://audit.auk-maritime.com/
+
+**Cost:** R950 per month. Cancel at any time.
+
+Running a full audit through the question set, grading the findings and producing the report is the closest thing to a real audit short of boarding a ship. If you intend to audit, this is the tool the work is done in, and knowing it before your first audit is worth considerably more than the monthly cost.`,
+  },
 ];
 
 export const aukSpm015Quiz = [
@@ -381,12 +437,192 @@ export const aukSpm015Quiz = [
     ],
     answer: 1,
   },
+  {
+    q: "How far in advance should a vessel normally be notified of a planned internal audit?",
+    options: ["24 hours", "At least two weeks", "Three months", "Notification is not required for internal audits"],
+    answer: 1,
+  },
+  {
+    q: "Which is the strongest argument for including unannounced audits in the annual programme?",
+    options: [
+      "They are cheaper, because no notification has to be prepared",
+      "A rest-hour system that is genuine looks the same on any day, and one that is manufactured does not",
+      "Flag States require at least one unannounced audit per year",
+      "They produce more findings, which demonstrates auditor diligence",
+    ],
+    answer: 1,
+  },
+  {
+    q: "At the closing meeting the master argues strongly that a non-conformity should be downgraded to an observation. He offers no new evidence. What should the auditor do?",
+    options: [
+      "Downgrade it, since the master knows the vessel better than the auditor",
+      "Hold the grading, record the master's comments in the report, and let the evidence stand",
+      "Defer the decision to the DPA without recording the finding",
+      "Remove the finding and raise it at the next audit if it recurs",
+    ],
+    answer: 1,
+  },
+  {
+    q: "Within what period should the audit report normally be completed after the audit?",
+    options: ["Same day", "Five working days", "One month", "Before the next scheduled audit"],
+    answer: 1,
+  },
+  {
+    q: "Which of these is acceptable close-out evidence for a non-conformity about an out-of-date procedure?",
+    options: [
+      "An email from the master confirming the matter has been dealt with",
+      "The revised procedure, with the crew acknowledgement signatures",
+      "A note in the audit file recording that corrective action was agreed",
+      "The vessel's assurance that the procedure will be revised at the next SMS review",
+    ],
+    answer: 1,
+  },
+  {
+    q: "An NCR is raised without a target close-out date. Why is this a problem?",
+    options: [
+      "It is not a problem provided the responsible person is named",
+      "There is nothing definite to verify against, so the finding cannot be closed",
+      "The flag State will reject the audit report",
+      "The NCR automatically escalates to a major non-conformity",
+    ],
+    answer: 1,
+  },
+  {
+    q: "The vessel's SMS requires a weekly safety meeting. The log shows meetings held in 8 of the last 12 weeks, with no recorded reason for the four missed. How should this be graded?",
+    options: [
+      "Observation — the meetings were mostly held",
+      "Non-conformity — a specific failure to meet a stated SMS requirement",
+      "Major non-conformity — safety meetings are a critical safety function",
+      "No finding — meeting frequency is guidance, not a requirement",
+    ],
+    answer: 1,
+  },
+  {
+    q: "The International Ship Security Certificate expired three weeks ago and the vessel has continued in international trade. The renewal audit is booked for next month. Grade this finding.",
+    options: [
+      "Observation — the renewal is already arranged",
+      "Non-conformity — a certificate administration failure",
+      "Major non-conformity — the vessel is trading in breach of SOLAS Chapter XI-2",
+      "No finding — a booked renewal audit maintains validity",
+    ],
+    answer: 2,
+  },
+  {
+    q: "Rest-hour records show every crew member at exactly the minimum compliant figure every day for three months, with no exceptions recorded. Interviews with ratings reveal they regularly work through rest periods in port. Grade this.",
+    options: [
+      "Observation — the records are compliant on their face",
+      "Non-conformity — some individual records are inaccurate",
+      "Major non-conformity — systemic falsification of rest-hour records",
+      "No finding — ratings' recollections are not objective evidence",
+    ],
+    answer: 2,
+  },
+  {
+    q: "The medicine chest inventory was last checked 14 months ago against a 12-month company requirement, and three medications are two months past expiry. Grade this.",
+    options: [
+      "Observation — the overrun is small",
+      "Non-conformity — an overdue inspection and expired medications against a stated requirement",
+      "Major non-conformity — expired medication is an immediate threat to life",
+      "No finding — medicine chest checks are a flag State matter, not an audit item",
+    ],
+    answer: 1,
+  },
+  {
+    q: "The Security Log has not been updated for six weeks. The SSO explains that nothing happened, so there was nothing to write. The SSP requires weekly entries. Grade this.",
+    options: [
+      "No finding — the SSO's explanation is reasonable",
+      "Observation — a documentation habit that could improve",
+      "Non-conformity — the SSP requires weekly entries and they were not made",
+      "Major non-conformity — security record failures are always major",
+    ],
+    answer: 2,
+  },
+  {
+    q: "Which combination of evidence-gathering methods should a competent audit use?",
+    options: [
+      "Document review alone, since records are the only verifiable evidence",
+      "Document review and interview, with observation reserved for follow-up audits",
+      "Document review, interview and observation — all three, in every audit",
+      "Observation alone, since records can be prepared in advance",
+    ],
+    answer: 2,
+  },
+  {
+    q: "A Ship Security Plan was approved by the flag State four years ago. The vessel has since changed trade routes and ownership, and the SSP has not been amended. What is this?",
+    options: [
+      "No finding — SSP approval is valid for five years",
+      "An observation, pending the next renewal",
+      "A non-conformity — the SSP must reflect the vessel's actual operating environment",
+      "A matter for the CSO alone, outside internal audit scope",
+    ],
+    answer: 2,
+  },
+  {
+    q: "Why does an open internal-audit non-conformity found later by port State control leave the company worse off than if no audit had been done?",
+    options: [
+      "PSC penalties are doubled where an internal audit exists",
+      "The record shows the company identified the problem and left it uncorrected",
+      "Internal audit reports must be surrendered to PSC on request",
+      "It invalidates the Safety Management Certificate automatically",
+    ],
+    answer: 1,
+  },
 ];
+
+export const aukSpm015Practical = {
+  title: "Combined ISM, ISPS and MLC Audit — Car Carrier Case Study",
+  description: `Built on an actual combined internal audit of a pure car carrier alongside in Durban. Vessel, company and personnel details removed; findings, timings and conditions as recorded.
+
+Eight findings were raised, all graded Observation, against a vessel with no pending conditions of class, no PSC deficiencies and a motivated crew. Candidates map each finding to its instrument and section, test the grading of the seized fire hydrants by arguing both cases and resolving the sampling question, distinguish the crew-hesitancy finding from the cause it actually evidences, rewrite two findings in requirement/evidence/deviation structure, and account for the report-date error in the original.
+
+Assessed on correct instrument mapping, defensible grading with sampling logic made explicit, and the requirement/evidence/deviation discipline. The fire hydrant grading carries the most weight.
+
+Full brief and tasks in Module 12.`,
+};
+
+export const aukSpm015Outcomes = [
+  "Explain the purpose, scope and legal basis of internal audit under the ISM Code, ISPS Code and MLC 2006",
+  "Plan an audit from certificate status, PSC history, previous findings and incident records",
+  "Apply ISO 19011 principles to maritime audit: objective evidence, independence, vertical and horizontal sampling",
+  "Conduct audit interviews that produce evidence rather than agreement",
+  "Grade findings as observation, non-conformity or major non-conformity, including the systemic-implementation limb",
+  "Write findings in requirement, evidence and deviation structure that survive external scrutiny",
+  "Run the audit process from notification through opening and closing meetings to report and close-out",
+  "Distinguish correction from corrective action, and verify close-out against objective evidence",
+  "Audit the ISM Code's sixteen sections, the ISPS Part A security requirements, and the five MLC Titles",
+];
+
+export const aukSpm015Summary =
+  "Train as a competent internal auditor across the three frameworks that govern every ship in international trade — the ISM Code, the ISPS Code and MLC 2006. Built on ISO 19011 principles and taught from real audit practice, covering planning, sampling, objective evidence, interview technique, finding grading, report writing and close-out verification. The assessed practical is a genuine combined audit of a car carrier in Durban.";
 
 export const aukSpm015 = {
   code: "AUK SPM 015",
   title: "ISM, MLC & ISPS Auditor",
+  summary: aukSpm015Summary,
+  outcomes: aukSpm015Outcomes,
   modules: aukSpm015Modules,
   quiz: aukSpm015Quiz,
-  passMark: 75, // 12 of 16
+  practical: aukSpm015Practical,
+  passMark: 70, // 21 of 30
 };
+
+/**
+ * MATERIALS still to produce and upload (Course.materials — [{name, url, ext, size}]).
+ * Not seeded; empty URLs would render broken download links. Items 1-5 exist as tables
+ * in the source facilitator guide and need only extraction.
+ *   1. ISM audit checklist — all 16 sections, evidence column, finding column
+ *   2. ISPS audit checklist — Part A references, ISSC, SSP, SSO, drills, SSAS test
+ *   3. MLC audit checklist — five Titles, rest hours, SEAs, accommodation, complaints
+ *   4. Internal Audit Report template
+ *   5. Non-Conformance Report (NCR) template
+ *   6. Finding classification quick-reference — OBS / NC / MNC with required response
+ *   7. Audit notification letter template
+ *
+ * Items 4 and 5 carry the most practical weight — candidates who leave with usable
+ * templates will actually run audits; candidates who leave with theory will not.
+ *
+ * NOTE ON THE SOURCE GUIDE: the facilitator guide claims TETA accreditation in section
+ * 1.1 and in the Appendix C certificate footer. That claim is not currently held and has
+ * deliberately been kept out of this course content, the certificate template and the
+ * verification page. Correct it in the participant handout before the next intake.
+ */

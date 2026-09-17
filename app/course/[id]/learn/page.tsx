@@ -10,6 +10,19 @@ type Item = { key: string | number; label: string; kind: "mats" | "vids" | "modu
 
 const readMins = (text: string) => Math.max(2, Math.round((text || "").split(/\s+/).length / 180));
 
+/**
+ * Pass mark for the assessment quiz.
+ *
+ * MUST match PASS_MARK in app/api/certificate/issue/route.ts. The player used to
+ * pass at 60 while the issue route required 70, so a learner could be told
+ * "Passed — well done!" and then be refused a certificate.
+ *
+ * The real fix is a passMark column on Course — every hand-authored course file
+ * exports one and none of them reaches the database. Until that column exists,
+ * this constant and the route's must be changed together.
+ */
+const PASS_MARK = 70;
+
 export default function CoursePlayer() {
   const { id } = useParams<{ id: string }>();
   const [course, setCourse]         = useState<any>(null);
@@ -77,8 +90,11 @@ export default function CoursePlayer() {
     ...modules.map((m, i) => ({ key: i, label: m.title, kind: "module" as const, minutes: readMins(m.content) })),
     ...(course.practical?.title ? [{ key: "demo", label: "Practical demonstration", kind: "demo" as const, minutes: 10 }] : []),
     ...(quiz.length ? [{ key: "quiz", label: "Assessment quiz", kind: "quiz" as const, minutes: quiz.length * 2 }] : []),
-    // Certificate only for paid courses
-    ...(course.price > 0 ? [{ key: "cert", label: "Certificate", kind: "cert" as const }] : []),
+    // Certificate on every course. It records completion, not payment — the
+    // control is the quiz pass mark, not the price. Previously gated on
+    // price > 0, which left free courses showing a "Go to certificate" button
+    // with no certificate step to go to.
+    { key: "cert", label: "Certificate", kind: "cert" as const },
   ], [course]);
 
   // Auto-resume: jump to first incomplete item once, when enrollment loads
@@ -88,7 +104,7 @@ export default function CoursePlayer() {
     const saved = typeof window !== "undefined" ? localStorage.getItem(`auk-pos-${id}`) : null;
     if (saved !== null && Number(saved) < items.length) { setActive(Number(saved)); return; }
     const firstIncomplete = items.findIndex((it) =>
-      it.kind === "quiz" ? enrollment.quizScore == null || enrollment.quizScore < 60
+      it.kind === "quiz" ? enrollment.quizScore == null || enrollment.quizScore < PASS_MARK
       : it.kind === "cert" ? false
       : !completed.includes(it.key));
     setActive(firstIncomplete === -1 ? items.length - 1 : firstIncomplete);
@@ -141,7 +157,7 @@ export default function CoursePlayer() {
   }
 
   function isDone(it: Item) {
-    if (it.kind === "quiz") return enrollment.quizScore != null && enrollment.quizScore >= 60;
+    if (it.kind === "quiz") return enrollment.quizScore != null && enrollment.quizScore >= PASS_MARK;
     if (it.kind === "cert") return enrollment.progress >= 100;
     return completed.includes(it.key);
   }
@@ -150,7 +166,7 @@ export default function CoursePlayer() {
     const hasMats = materials.length ? 1 : 0;
     const total = hasMats + modules.length + (course.practical?.title ? 1 : 0) + (quiz.length ? 1 : 0);
     let done = newCompleted.filter((k) => k !== "quiz").length;
-    if (quiz.length) done += quizScore != null && quizScore >= 60 ? 1 : 0;
+    if (quiz.length) done += quizScore != null && quizScore >= PASS_MARK ? 1 : 0;
     return Math.min(100, Math.round((done / total) * 100));
   }
 
@@ -305,11 +321,11 @@ export default function CoursePlayer() {
               <div>
                 {enrollment.quizScore != null && !retaking ? (
                   <div>
-                    <div className={`font-serif text-5xl font-bold ${enrollment.quizScore >= 60 ? "text-teal" : "text-red-600"}`}>{enrollment.quizScore}%</div>
-                    <p className="mt-1 text-gray-500">{enrollment.quizScore >= 60 ? "✓ Passed — well done!" : "Not passed yet — 60% needed. Review the lessons and retake."}</p>
+                    <div className={`font-serif text-5xl font-bold ${enrollment.quizScore >= PASS_MARK ? "text-teal" : "text-red-600"}`}>{enrollment.quizScore}%</div>
+                    <p className="mt-1 text-gray-500">{enrollment.quizScore >= PASS_MARK ? "✓ Passed — well done!" : `Not passed yet — ${PASS_MARK}% needed. Review the lessons and retake.`}</p>
                     <div className="mt-4 flex gap-2">
                       <button className="btn-ghost" onClick={() => { setQuizAnswers({}); setQuizChecked(false); setRetaking(true); }}>Retake quiz</button>
-                      {enrollment.quizScore >= 60 && <button className="btn-primary" onClick={() => setActive(items.length - 1)}>Go to certificate →</button>}
+                      {enrollment.quizScore >= PASS_MARK && <button className="btn-primary" onClick={() => setActive(items.length - 1)}>Go to certificate →</button>}
                     </div>
                   </div>
                 ) : (
@@ -353,16 +369,32 @@ export default function CoursePlayer() {
               </div>
             )}
 
+            {/*
+              Certificate step.
+
+              This used to RENDER a certificate here — company name, learner name,
+              course title and a "Download certificate (PDF)" link. It was
+              cosmetic: no Certificate row was created, so there was no certificate
+              number and nothing to verify, and the link pointed at /api/certificate,
+              which does not exist. A learner could screenshot something that looked
+              official and was backed by nothing.
+
+              It now sends the learner into the real flow at /certificate/[courseId]:
+              confirm the name, freeze the snapshot, allocate the sequential number,
+              then land on the verification page.
+            */}
             {current.kind === "cert" && (
               enrollment.progress >= 100 ? (
                 <div className="rounded-lg border-2 border-hull p-8 text-center">
                   <div className="text-4xl">🎉</div>
-                  <div className="mt-2 font-serif text-lg font-bold text-hull">AUK MARINE TRAINING</div>
-                  <div className="mt-3 text-xs uppercase tracking-widest text-teal">Certificate of {course.credits ? "Competence" : "Completion"}</div>
-                  <div className="mt-3 font-serif text-3xl font-bold text-hull">{name}</div>
-                  <p className="mt-3 text-sm text-gray-600">has completed<br /><b>{course.title}</b></p>
-                  <a href={`/api/certificate?learnerId=${enrollment.learnerId}&courseId=${id}`} target="_blank" rel="noopener" className="btn-primary mt-5 inline-block">
-                    Download certificate (PDF)
+                  <h2 className="mt-3 font-serif text-xl font-bold text-hull">You&apos;ve completed the course</h2>
+                  <p className="mt-2 text-sm text-gray-600"><b>{course.title}</b></p>
+                  <p className="mx-auto mt-4 max-w-sm text-sm text-gray-500">
+                    One step left. You&apos;ll be asked to check how your name should be
+                    printed — once the certificate is issued the name cannot be changed.
+                  </p>
+                  <a href={`/certificate/${id}`} className="btn-primary mt-5 inline-block">
+                    Get my certificate →
                   </a>
                 </div>
               ) : (

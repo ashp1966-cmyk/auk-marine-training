@@ -1,6 +1,48 @@
 import { PrismaClient } from "@prisma/client";
 import { aukSpm015 } from "./courses/auk-spm-015";
+import { us252437 } from "./courses/us-252437";
+import { aukS40 } from "./courses/auk-s-40";
+import { auk499 } from "./courses/auk-499";
+import { aukSpm018 } from "./courses/auk-spm-018";
+import { aukSpm023 } from "./courses/auk-spm-023";
+import { aukSpm001 } from "./courses/auk-spm-001";
+import { us252414 } from "./courses/us-252414";
+import { us242987 } from "./courses/us-242987";
 const prisma = new PrismaClient();
+
+/**
+ * RETIRED COURSES — never recreate these.
+ *
+ * `db:seed` is a catalogue RESTORE, not an additive load: upsertCourse() creates
+ * any course whose row is missing. So deleting a course in the admin UI and then
+ * running db:seed to load something else silently resurrects it.
+ *
+ * Deleting a course is therefore TWO steps:
+ *   1. delete the row (admin UI, or prisma/delete-courses.ts)
+ *   2. add its code here
+ *
+ * Without step 2 the deletion is temporary. Codes listed here are skipped by
+ * upsertCourse() even if they are still present in the arrays below.
+ */
+const RETIRED = new Set<string>([
+  "AUK S 7",     // Computer Literacy
+  "AUK S 9",     // SAP/ERP
+  "AUK S 50",    // Digital Transformation & IR 4.0
+  "AUK S 55",    // Development Platform
+  "AUK S 56",    // Oracle Database & Design with SQL
+  "AUK S 58",    // VLSI Design Training & Manufacturing
+  "AUK S 60",    // Hybrid, Mobile & Web App Development
+  "AUK AUT01",   // Robotics
+  "AUK AUT03",   // Mechatronics
+  "AUK AUT05",   // Advanced Tool Maintenance & Repair
+  "AUK AUT07",   // 3D Design & Printing
+  "AUK B12",     // Lean Six Sigma
+  "AUK FIN01",   // Financial & Derivative Modelling
+  "AUK SK04",    // Presentation Skills (5 P's)
+  "AUK SK06",    // Lean Co-creation
+  "AUK SK15",    // Confidence & Empathy
+  "AUK FIN06",   // Asset Risk Modelling — retired 11 Sep 2026
+]);
 
 // Prices in cents (ZAR). Learnership / NQF unit standards = 0 (state-funded).
 // Short-skill workshops priced by typical duration.
@@ -10,6 +52,7 @@ const P = {
   day2:  420000,  // 2 days          R 4 200
   day3:  620000,  // 3 days          R 6 200
   day4:  880000,  // 4 days          R 8 800
+  day5: 1050000,  // 5 days          R10 500   <- CHECK: extrapolated, set your own
   free:  0,       // learnership / sponsored
 };
 
@@ -54,6 +97,7 @@ async function main() {
     price: number; featured?: boolean; nqfLevel?: string; credits?: number;
     summary?: string; modes?: string[];
   }) {
+    if (RETIRED.has(data.code)) return;   // deliberately removed from the catalogue
     const existing = await prisma.course.findFirst({ where: { code: data.code } });
     if (existing) return;
     await prisma.course.create({
@@ -90,6 +134,7 @@ async function main() {
   // SHIPPING, PORT & MARITIME
   // ═══════════════════════════════════════════════════════════════════════════════
   const maritime = [
+    { code: "AUK-499",     title: "HELM (Ships) — Management Level",                    durationLabel: "5 days", price: P.day5, featured: true  },
     { code: "AUK SPM 001", title: "Shipping, Port & Ships Agency",                      durationLabel: "3 days", price: P.day3, featured: true  },
     { code: "AUK SPM 011", title: "Smart & Green Shipping",                              durationLabel: "2 days", price: P.day2, featured: true  },
     { code: "AUK SPM 012", title: "Maritime Risk Management",                            durationLabel: "3 days", price: P.day3, featured: true  },
@@ -121,21 +166,122 @@ async function main() {
     },
   });
 
+  // ─── Real content for US-242987 (overwrites the generic placeholder) ────────
+  // Dangerous Goods by Air. Source manual (2009) omits lithium batteries entirely
+  // and misstates Class 4. Both corrected. NOTE: this course does NOT qualify a
+  // learner to offer dangerous goods for air transport — see Module 15. Do not
+  // market it as DG certification.
+  await prisma.course.updateMany({
+    where: { code: us242987.code },
+    data: {
+      summary: us242987.summary,
+      outcomes: us242987.outcomes,
+      modules: us242987.modules,
+      quiz: us242987.quiz,
+      practical: us242987.practical,
+    },
+  });
+
+  // ─── Real content for US-252414 (overwrites the generic placeholder) ────────
+  // Calculate Customs Values. Source manual (2009) applies VAT at 14%, calls the
+  // ATV the "actual" rather than "added" tax value, cites GATT rather than WTO,
+  // and carries a transposed-digit error in its mark-up example. All corrected —
+  // see the notes in the course file.
+  await prisma.course.updateMany({
+    where: { code: us252414.code },
+    data: {
+      summary: us252414.summary,
+      outcomes: us252414.outcomes,
+      modules: us252414.modules,
+      quiz: us252414.quiz,
+      practical: us252414.practical,
+    },
+  });
+
+  // ─── Real content for AUK SPM 001 (overwrites the generic placeholder) ──────
+  // Shipping, Port & Ships Agency. Source guide was written for one named client
+  // and carried a competitor list and a third party's rate card — all removed.
+  // See the source-handling note in the course file.
+  await prisma.course.updateMany({
+    where: { code: aukSpm001.code },
+    data: {
+      summary: aukSpm001.summary,
+      outcomes: aukSpm001.outcomes,
+      modules: aukSpm001.modules,
+      quiz: aukSpm001.quiz,
+      practical: aukSpm001.practical,
+    },
+  });
+
+  // ─── Real content for AUK SPM 018 (overwrites the generic placeholder) ──────
+  // Condition & pre-purchase inspection. Source guide names an individual
+  // learner and cites a second unit standard (SPM 019) — see notes in the file.
+  await prisma.course.updateMany({
+    where: { code: aukSpm018.code },
+    data: {
+      summary: aukSpm018.summary,
+      outcomes: aukSpm018.outcomes,
+      modules: aukSpm018.modules,
+      quiz: aukSpm018.quiz,
+      practical: aukSpm018.practical,
+    },
+  });
+
+  // ─── Real content for AUK SPM 023 (overwrites the generic placeholder) ──────
+  // Freight Forwarding. Built on SAQA US 252439 but updated throughout — the
+  // source manual (2009) teaches liner conferences and Tremcards, and omits
+  // VGM, ISPM 15 and the CTU Code. See notes in the course file.
+  await prisma.course.updateMany({
+    where: { code: aukSpm023.code },
+    data: {
+      summary: aukSpm023.summary,
+      outcomes: aukSpm023.outcomes,
+      modules: aukSpm023.modules,
+      quiz: aukSpm023.quiz,
+      practical: aukSpm023.practical,
+    },
+  });
+
+  // ─── Real content for AUK S 40 (overwrites the generic placeholder) ──────────
+  // HELM Operational Level, IMO Model Course 1.39, STCW A-II/1 & A-III/1.
+  // durationLabel corrected: IMO 1.39 is 21 contact hours, not 2 days.
+  await prisma.course.updateMany({
+    where: { code: aukS40.code },
+    data: {
+      title: aukS40.title,
+      summary: aukS40.summary,
+      outcomes: aukS40.outcomes,
+      modules: aukS40.modules,
+      quiz: aukS40.quiz,
+      practical: aukS40.practical,
+      durationLabel: aukS40.durationLabel,
+    },
+  });
+
+  // ─── Real content for AUK-499 (overwrites the generic placeholder) ──────────
+  // HELM Management Level, IMO Model Course 1.40, STCW A-II/2 & A-III/2.
+  // Prerequisite: AUK S 40 (HELM Operational).
+  await prisma.course.updateMany({
+    where: { code: auk499.code },
+    data: {
+      title: auk499.title,
+      summary: auk499.summary,
+      outcomes: auk499.outcomes,
+      modules: auk499.modules,
+      quiz: auk499.quiz,
+      practical: auk499.practical,
+      durationLabel: auk499.durationLabel,
+    },
+  });
+
   // ═══════════════════════════════════════════════════════════════════════════════
   // INFORMATION TECHNOLOGY
   // ═══════════════════════════════════════════════════════════════════════════════
   const it = [
-    { code: "AUK S 7",  title: "Computer Literacy",                                                           durationLabel: "1 day",  price: P.day1 },
-    { code: "AUK S 9",  title: "SAP/ERP",                                                                     durationLabel: "3 days", price: P.day3 },
     { code: "AUK S 12", title: "Data Analytics & AI",                                                         durationLabel: "2 days", price: P.day2, featured: true },
     { code: "AUK S 37", title: "Basic & Advanced Excel",                                                      durationLabel: "1 day",  price: P.day1, featured: true },
-    { code: "AUK S 50", title: "Digital Transformation & IR 4.0 Opportunities and Challenges",                durationLabel: "2 days", price: P.day2 },
     { code: "AUK S 52", title: "Arduino / Raspberry Pi",                                                      durationLabel: "2 days", price: P.day2 },
     { code: "AUK S 54", title: "Introduction to Python",                                                      durationLabel: "2 days", price: P.day2 },
-    { code: "AUK S 55", title: "Development Platform",                                                        durationLabel: "2 days", price: P.day2 },
-    { code: "AUK S 56", title: "Oracle Database & Design with SQL",                                           durationLabel: "2 days", price: P.day2 },
-    { code: "AUK S 58", title: "VLSI Design Training & VLSI Design Manufacturing",                            durationLabel: "2 days", price: P.day2 },
-    { code: "AUK S 60", title: "Hybrid, Mobile & Web App Development (Java / React.js / Angular.js / Node.js / .NET)", durationLabel: "2 days", price: P.day2 },
     { code: "AUK S 61", title: "Program Logic Controller Including IOT, SCADA & Human Machine Interface",     durationLabel: "2 days", price: P.day2 },
   ];
   for (const c of it) await upsertCourse({ ...c, category: "IT" });
@@ -144,13 +290,9 @@ async function main() {
   // AUTOMATION & IoT
   // ═══════════════════════════════════════════════════════════════════════════════
   const automation = [
-    { code: "AUK AUT01", title: "Robotics",                                               durationLabel: "2 days", price: P.day2 },
     { code: "AUK AUT02", title: "Automation & IoT",                                       durationLabel: "3 days", price: P.day3, featured: true },
-    { code: "AUK AUT03", title: "Mechatronics",                                           durationLabel: "2 days", price: P.day2 },
     { code: "AUK AUT04", title: "Process Control Techniques",                             durationLabel: "2 days", price: P.day2 },
-    { code: "AUK AUT05", title: "Advanced Tool Maintenance & Repair",                     durationLabel: "3 days", price: P.day3 },
     { code: "AUK AUT06", title: "Handling Robotics & Drones",                            durationLabel: "2 days", price: P.day2 },
-    { code: "AUK AUT07", title: "3D Design & Printing",                                  durationLabel: "2 days", price: P.day2 },
     { code: "AUK AUT08", title: "Artificial Intelligence / Machine Learning / Data Science / Data Engineering", durationLabel: "2 days", price: P.day2, featured: true },
   ];
   for (const c of automation) await upsertCourse({ ...c, category: "Automation" });
@@ -170,7 +312,6 @@ async function main() {
     { code: "AUK B09", title: "Product Development & Improvement",                       durationLabel: "2 days", price: P.day2 },
     { code: "AUK B10", title: "Product Export & Compliance",                             durationLabel: "2 days", price: P.day2 },
     { code: "AUK B11", title: "Project Management Skills & Introduction to Scrum",       durationLabel: "2 days", price: P.day2 },
-    { code: "AUK B12", title: "Lean Six Sigma",                                          durationLabel: "1 day",  price: P.day1 },
     { code: "AUK B13", title: "Smart Business Models",                                   durationLabel: "1 day",  price: P.day1 },
     { code: "AUK B14", title: "Fund Raising & Investor Readiness",                       durationLabel: "2 days", price: P.day2 },
     { code: "AUK B15", title: "Sector-specific Business Development",                    durationLabel: "2 days", price: P.day2 },
@@ -185,12 +326,10 @@ async function main() {
     { code: "AUK S 30",  title: "Financial Sustainability",                              durationLabel: "2 days", price: P.day2 },
     { code: "AUK S 36",  title: "Finance for Non-Finance",                               durationLabel: "1 day",  price: P.day1, featured: true },
     { code: "AUK S 45",  title: "Fund Raising for Small Business",                       durationLabel: "2 days", price: P.day2 },
-    { code: "AUK FIN01", title: "Financial & Derivative Modelling",                      durationLabel: "3 days", price: P.day3 },
     { code: "AUK FIN02", title: "Basic & Advanced Excel for Finance",                    durationLabel: "2 days", price: P.day2 },
     { code: "AUK FIN03", title: "Project Finance",                                       durationLabel: "3 days", price: P.day3 },
     { code: "AUK FIN04", title: "Capital Markets",                                       durationLabel: "2 days", price: P.day2 },
     { code: "AUK FIN05", title: "Risk Analysis, Audits & Reporting",                     durationLabel: "2 days", price: P.day2 },
-    { code: "AUK FIN06", title: "Asset Risk Modelling",                                  durationLabel: "2 days", price: P.day2 },
     { code: "AUK FIN07", title: "Equity Valuation & Data Modelling",                     durationLabel: "3 days", price: P.day3 },
   ];
   for (const c of finance) await upsertCourse({ ...c, category: "Finance" });
@@ -226,9 +365,7 @@ async function main() {
     { code: "AUK SK01", title: "Judgement & Decision Making",                            durationLabel: "1 day",    price: P.day1 },
     { code: "AUK SK02", title: "Art of Assertiveness & Active Listening",                durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK03", title: "Stress Management",                                      durationLabel: "2 hours",  price: P.half },
-    { code: "AUK SK04", title: "Presentation Skills (5 P's)",                           durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK05", title: "Negotiation Skills",                                     durationLabel: "2 hours",  price: P.half },
-    { code: "AUK SK06", title: "Lean Co-creation",                                      durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK07", title: "Design & Innovative Thinking",                          durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK08", title: "Mental Well-being for Everyone",                        durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK09", title: "Communication Skills",                                   durationLabel: "2 hours",  price: P.half },
@@ -237,7 +374,6 @@ async function main() {
     { code: "AUK SK12", title: "Growth Mindset & Problem Solving",                      durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK13", title: "Public Speaking",                                        durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK14", title: "Goal Setting, Personal Branding & Image Management",    durationLabel: "2 hours",  price: P.half },
-    { code: "AUK SK15", title: "Confidence & Empathy",                                  durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK16", title: "Social Awareness & Interpersonal Skills",               durationLabel: "2 hours",  price: P.half },
     { code: "AUK SK17", title: "Critical Thinking & Creativity",                        durationLabel: "2 hours",  price: P.half },
   ];
@@ -283,6 +419,20 @@ async function main() {
     { code: "US-242987", title: "Identify, Pack, Mark & Label Dangerous Goods for Transportation by Air", durationLabel: "Unit Standard", price: P.free, nqfLevel: "Level 4", credits: 2 },
   ];
   for (const c of logistics) await upsertCourse({ ...c, category: "Logistics", modes: ["online"] });
+
+  // ─── Real content for US-252437 (overwrites the generic placeholder) ─────────
+  // Incoterms 2020, with a legacy annex covering the 13 Incoterms 2000 terms.
+  // nqfLevel and credits are already set by the logistics array above.
+  await prisma.course.updateMany({
+    where: { code: us252437.code },
+    data: {
+      summary: us252437.summary,
+      outcomes: us252437.outcomes,
+      modules: us252437.modules,
+      quiz: us252437.quiz,
+      practical: us252437.practical,
+    },
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // FACILITATORS
@@ -465,6 +615,7 @@ async function main() {
   // ─── Count summary ────────────────────────────────────────────────────────────
   const courseTotals = await prisma.course.groupBy({ by: ["category"], _count: { id: true } });
   console.log("\n✓ Seed complete.\n");
+  if (RETIRED.size) console.log(`(${RETIRED.size} retired course codes skipped)\n`);
   console.log("Courses seeded by category:");
   courseTotals.forEach((c) => console.log(`  ${c.category.padEnd(16)} ${c._count.id}`));
   const total = courseTotals.reduce((s, c) => s + c._count.id, 0);
@@ -473,6 +624,19 @@ async function main() {
   const facCount = await prisma.facilitator.count();
   console.log(`\nResearch projects: ${resCount}`);
   console.log(`Facilitators:      ${facCount}`);
+
+  // Hand-authored content — confirms the updateMany blocks actually landed.
+  // A row with 3 modules is still on the generic placeholder.
+  const authored = await prisma.course.findMany({
+    where: { code: { in: [aukSpm001.code, aukSpm015.code, us252414.code, us242987.code, aukSpm018.code, aukSpm023.code, us252437.code, aukS40.code, auk499.code] } },
+    select: { code: true, modules: true, quiz: true },
+  });
+  console.log("\nHand-authored content:");
+  for (const c of authored) {
+    const m = Array.isArray(c.modules) ? c.modules.length : 0;
+    const q = Array.isArray(c.quiz) ? c.quiz.length : 0;
+    console.log(`  ${c.code.padEnd(14)} ${m} modules, ${q} quiz questions`);
+  }
 }
 
 main()

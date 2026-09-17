@@ -146,7 +146,11 @@ export default async function CoursePage({ params }: { params: { id: string } })
           <div className="rounded-xl border border-gray-200 bg-white p-6">
             <h2 className="font-serif text-xl font-bold text-hull">About {course.provider.name}</h2>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              {(course.provider as any).tagline || "Accredited training provider — Est. 2012 & 2017. TETA-accredited, delivering maritime, mining, logistics, business, IT and soft-skills training."}
+              {/* Fallback only — Provider.tagline in the database wins if set, so
+                  check there too. TETA accreditation is not currently held and the
+                  claim has been removed from the footer, homepage, certificate
+                  template and verification page. */}
+              {(course.provider as any).tagline || "Maritime, mining, logistics, business and technical training — Est. 2012 & 2017. Delivered online, in-classroom, and on site."}
             </p>
             <Link href="/facilitators" className="mt-3 inline-block text-sm text-teal hover:underline">Meet our facilitators →</Link>
           </div>
@@ -178,7 +182,9 @@ function EnrolledCard({ courseId, progress }: { courseId: string; progress: numb
             {progress >= 100 ? "✓ Completed!" : progress > 0 ? "In progress" : "Not started"}
           </div>
           <div className="text-xs text-gray-400 mt-0.5">
-            {progress >= 100 ? "Certificate ready to download" : `${progress}% complete`}
+            {/* Not "download" — PDF generation does not exist yet; the learner
+                gets a verification page. */}
+            {progress >= 100 ? "Certificate ready to claim" : `${progress}% complete`}
           </div>
         </div>
       </div>

@@ -230,5 +230,19 @@ model Certificate {
   verifyToken String   @unique @default(cuid())
   issuedAt    DateTime @default(now())
 
+  seq         Int      @unique @default(autoincrement())
+
+  learnerName  String
+  courseTitle  String
+  courseCode   String
+  deliveryMode String    @default("Held Online")
+  startedOn    DateTime?
+  completedOn  DateTime
+  score        Int?
+  facilitator  String    @default("Capt. Ashwani Pathak")
+
+  revokedAt     DateTime?
+  revokedReason String?
+
   @@unique([learnerId, courseId])
 }

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AUK Marine — Certificate of Completion</title>
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     AUK MARINE & MINING — CERTIFICATE OF COMPLETION
+     A4 portrait, print/PDF ready.
+
+     Placeholders use {{DOUBLE_BRACES}} — replace server-side.
+     Open this file directly in a browser to preview with the
+     sample values already in place.
+
+     ASSETS REQUIRED in /public:
+       /cert/auk-logo.png        header logo (transparent PNG, ~600px wide)
+       /cert/ship-bg.jpg         background photo (the container ship)
+       /cert/signature.png       signature (transparent PNG)
+       /cert/company-stamp.png   the "AUK MARINE AND MINING PTY LTD" block
+     If an asset is missing the layout still holds — the slot collapses
+     rather than breaking.
+     ───────────────────────────────────────────────────────────── */
+
+  @page { size: A4 portrait; margin: 0; }
+
+  :root {
+    --navy:       #1f3f6b;
+    --navy-light: #4a6d99;
+    --ink:        #1a1a1a;
+    --muted:      #555;
+    --rule:       #7a7a7a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 210mm;
+    height: 297mm;
+    font-family: 'Century Gothic', 'Questrial', 'Trebuchet MS', 'Segoe UI', sans-serif;
+    color: var(--ink);
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    padding: 7mm;
+    overflow: hidden;
+  }
+
+  /* Double blue border */
+  .frame-outer {
+    position: absolute;
+    inset: 7mm;
+    border: 2.5px solid var(--navy);
+  }
+  .frame-inner {
+    position: absolute;
+    inset: 9mm;
+    border: 1px solid var(--navy-light);
+  }
+
+  /* Ship photograph, faded, sitting behind the middle band */
+  .bg-ship {
+    position: absolute;
+    left: 9mm; right: 9mm;
+    top: 95mm;
+    height: 95mm;
+    background-image: url('/cert/ship-bg.jpg');
+    background-size: cover;
+    background-position: center 40%;
+    opacity: 0.22;
+    z-index: 0;
+  }
+  .bg-ship::after {           /* soften both edges into the page */
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom,
+      #fff 0%, rgba(255,255,255,0.55) 22%,
+      rgba(255,255,255,0.55) 78%, #fff 100%);
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    padding: 12mm 16mm 10mm;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  .logo { height: 20mm; width: auto; margin: 0 auto 4mm; display: block; }
+
+  .est        { font-size: 10.5pt; margin-bottom: 1mm; }
+  .company    { font-size: 12pt; font-weight: 700; margin-bottom: 1mm; }
+  .reg        { font-size: 10.5pt; color: var(--muted); }
+
+  /* ── Title ──────────────────────────────────────────────── */
+  .cert-title {
+    font-size: 25pt;
+    font-weight: 400;
+    letter-spacing: 0.4pt;
+    margin: 12mm 0 10mm;
+  }
+
+  /* ── Learner ────────────────────────────────────────────── */
+  .learner-name {
+    font-size: 24pt;
+    font-weight: 700;
+    letter-spacing: 0.3pt;
+    margin-bottom: 12mm;
+    /* Long names shrink rather than wrapping to two lines */
+    line-height: 1.15;
+  }
+  .learner-name.long  { font-size: 20pt; }
+  .learner-name.xlong { font-size: 17pt; }
+
+  .lead { font-size: 14pt; margin-bottom: 4mm; }
+
+  .course-title {
+    font-size: 18pt;
+    font-weight: 400;
+    line-height: 1.5;
+    margin-bottom: 11mm;
+    padding: 0 8mm;
+  }
+
+  .delivery  { font-size: 12pt; font-weight: 700; margin-bottom: 3mm; }
+  .dates     { font-size: 12pt; margin-bottom: 2mm; }
+
+  .spacer { flex: 1 1 auto; min-height: 6mm; }
+
+  /* ── Signature block ────────────────────────────────────── */
+  .cert-number { font-size: 13pt; margin-bottom: 6mm; }
+
+  .signature-img {
+    height: 14mm; width: auto;
+    display: block; margin: 0 auto -2mm;
+  }
+  .sig-rule {
+    width: 62mm; height: 0;
+    border-bottom: 1px solid var(--ink);
+    margin: 0 auto 2.5mm;
+  }
+  .sig-name { font-size: 12.5pt; margin-bottom: 8mm; }
+
+  /* ── Footer ─────────────────────────────────────────────── */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    text-align: left;
+    font-size: 8.5pt;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .footer-address { max-width: 82mm; }
+  .footer-email   { margin-top: 1.5mm; }
+  .stamp-img      { height: 20mm; width: auto; opacity: 0.85; }
+
+  /* Verification line — optional, see CERTIFICATE-SETUP.md */
+  .verify {
+    font-size: 7.5pt;
+    color: var(--muted);
+    margin-top: 2mm;
+  }
+
+  @media screen {
+    body { background: #e8e8e8; padding: 20px 0; height: auto; }
+    .page { margin: 0 auto; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,.28); }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="frame-outer"></div>
+  <div class="frame-inner"></div>
+  <div class="bg-ship"></div>
+
+  <div class="content">
+
+    <img class="logo" src="/cert/auk-logo.png" alt="AUK Marine">
+
+    <div class="est">Est. 2012</div>
+    <div class="company">AUK Marine and Mining</div>
+    <div class="reg">Reg No: 2012/099242/07&nbsp;&nbsp;VAT No: 4410268256</div>
+    <!-- TETA accreditation line intentionally removed — not currently held -->
+
+    <div class="cert-title">CERTIFICATE OF COMPLETION</div>
+
+    <div class="learner-name {{NAME_SIZE_CLASS}}">{{LEARNER_NAME}}</div>
+
+    <div class="lead">Has successfully completed</div>
+
+    <div class="course-title">{{COURSE_TITLE}}</div>
+
+    <div class="delivery">{{DELIVERY_MODE}}</div>
+    <div class="dates">{{COMPLETION_DATES}}</div>
+
+    <div class="spacer"></div>
+
+    <div class="cert-number">Certificate Number: {{CERT_NUMBER}}</div>
+
+    <img class="signature-img" src="/cert/signature.png" alt="">
+    <div class="sig-rule"></div>
+    <div class="sig-name">{{FACILITATOR_NAME}} (Facilitator)</div>
+
+    <div class="footer">
+      <div class="footer-address">
+        Suite 33, Unit F1, 1<sup>st</sup> Floor, Tower A, Northlands Corner
+        Shopping Centre, Hoogland, Ext-25, Johannesburg, South Africa
+        <div class="footer-email">
+          admin@auk-maritime.com<br>
+          ashwani@auk-maritime.com
+        </div>
+        <div class="verify">{{VERIFY_LINE}}</div>
+      </div>
+      <img class="stamp-img" src="/cert/company-stamp.png" alt="">
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* Preview-only sample data. Delete this block when wiring server-side —
+   the server should replace the {{PLACEHOLDERS}} in the HTML directly. */
+(function () {
+  var sample = {
+    LEARNER_NAME:     'David OMOH',
+    COURSE_TITLE:     'Condition and Pre-purchase Inspection for Vessels',
+    DELIVERY_MODE:    'Held Online',
+    COMPLETION_DATES: 'On 13 May – 16 May 2025',
+    CERT_NUMBER:      'AUK 060',
+    FACILITATOR_NAME: 'Capt. Ashwani Pathak',
+    VERIFY_LINE:      'Verify at training.auk-maritime.com/verify/xk4m2p9q'
+  };
+  var len = sample.LEARNER_NAME.length;
+  sample.NAME_SIZE_CLASS = len > 34 ? 'xlong' : len > 24 ? 'long' : '';
+
+  document.body.innerHTML = Object.keys(sample).reduce(function (html, k) {
+    return html.split('{{' + k + '}}').join(sample[k]);
+  }, document.body.innerHTML);
+})();
+</script>
+
+</body>
+</html>

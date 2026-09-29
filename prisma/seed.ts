@@ -1,4 +1,8 @@
+import { us242996 } from "./courses/us-242996";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
+import ws from "ws";
 import { aukSpm015 } from "./courses/auk-spm-015";
 import { us252437 } from "./courses/us-252437";
 import { aukS40 } from "./courses/auk-s-40";
@@ -8,7 +12,14 @@ import { aukSpm023 } from "./courses/auk-spm-023";
 import { aukSpm001 } from "./courses/auk-spm-001";
 import { us252414 } from "./courses/us-252414";
 import { us242987 } from "./courses/us-242987";
-const prisma = new PrismaClient();
+// Neon serverless driver — tunnels Postgres over HTTPS/WSS on 443 instead of a
+// direct TCP connection on 5432. Restricted networks (ship satellite links,
+// hotel and corporate wifi) routinely block 5432 outbound while allowing 443.
+// Matches lib/db.ts; requires previewFeatures = ["driverAdapters"] in schema.prisma.
+neonConfig.webSocketConstructor = ws;
+const prisma = new PrismaClient({
+  adapter: new PrismaNeon(new Pool({ connectionString: process.env.DATABASE_URL })),
+});
 
 /**
  * RETIRED COURSES — never recreate these.
@@ -171,6 +182,21 @@ async function main() {
   // and misstates Class 4. Both corrected. NOTE: this course does NOT qualify a
   // learner to offer dangerous goods for air transport — see Module 15. Do not
   // market it as DG certification.
+  // ─── Real content for US-242996 (overwrites the generic placeholder) ────────
+  // DG warehousing. Source manual (2009) predates GHS — says MSDS throughout —
+  // and omits lithium batteries. Both corrected. Does NOT qualify a learner to
+  // classify or declare DG; see Module 15.
+  await prisma.course.updateMany({
+    where: { code: us242996.code },
+    data: {
+      summary: us242996.summary,
+      outcomes: us242996.outcomes,
+      modules: us242996.modules,
+      quiz: us242996.quiz,
+      practical: us242996.practical,
+    },
+  });
+
   await prisma.course.updateMany({
     where: { code: us242987.code },
     data: {
@@ -628,7 +654,7 @@ async function main() {
   // Hand-authored content — confirms the updateMany blocks actually landed.
   // A row with 3 modules is still on the generic placeholder.
   const authored = await prisma.course.findMany({
-    where: { code: { in: [aukSpm001.code, aukSpm015.code, us252414.code, us242987.code, aukSpm018.code, aukSpm023.code, us252437.code, aukS40.code, auk499.code] } },
+    where: { code: { in: [aukSpm001.code, aukSpm015.code, us252414.code, us242987.code, us242996.code, aukSpm018.code, aukSpm023.code, us252437.code, aukS40.code, auk499.code] } },
     select: { code: true, modules: true, quiz: true },
   });
   console.log("\nHand-authored content:");

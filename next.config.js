@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Load `ws` (used by the Neon driver in lib/db.ts) from node_modules at runtime
+  // instead of bundling it. Bundled, its optional `bufferutil` lookup resolves to
+  // a stub and crashes with "t.mask is not a function" during `next build`.
+  experimental: {
+    serverComponentsExternalPackages: ["ws"],
+  },
   images: {
     remotePatterns: [{ hostname: "*.public.blob.vercel-storage.com" }],
   },

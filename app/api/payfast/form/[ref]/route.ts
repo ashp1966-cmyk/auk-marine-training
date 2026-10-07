@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { buildSignature, paymentUrl } from "@/lib/payfast";
+import { isGroupRef } from "@/lib/group";
 
 // GET /api/payfast/form/[ref]
 // Returns a full HTML page that immediately auto-submits a POST form to PayFast.
@@ -8,15 +9,34 @@ import { buildSignature, paymentUrl } from "@/lib/payfast";
 // server computes the signature and embeds it directly in the HTML form values.
 export async function GET(req: NextRequest, { params }: { params: { ref: string } }) {
   try {
-    const booking = await prisma.booking.findFirst({
-      where: { ref: params.ref },
-      include: {
-        course: { select: { code: true, title: true } },
-        learner: { select: { name: true, email: true } },
-      },
-    });
-    if (!booking) {
-      return new NextResponse("Booking not found", { status: 404 });
+    // Normalise individual bookings and team (GRP-) orders into one shape.
+    type Order = { ref: string; amountCents: number; itemName: string; name: string; email: string; returnPath: string; cancelPath: string };
+    let order: Order;
+    if (isGroupRef(params.ref)) {
+      const g = await prisma.groupBooking.findUnique({ where: { ref: params.ref }, include: { course: { select: { code: true, title: true } } } });
+      if (!g) return new NextResponse("Booking not found", { status: 404 });
+      if (g.status === "Paid") return NextResponse.redirect(new URL(`/group/${g.manageToken}`, req.url));
+      order = {
+        ref: g.ref, amountCents: g.amountCents,
+        itemName: `${g.course.code} ${g.course.title} x${g.seats} seats`,
+        name: g.contactName, email: g.contactEmail,
+        returnPath: `/group/${g.manageToken}`, cancelPath: `/group/${g.manageToken}`,
+      };
+    } else {
+      const booking = await prisma.booking.findFirst({
+        where: { ref: params.ref },
+        include: {
+          course: { select: { code: true, title: true } },
+          learner: { select: { name: true, email: true } },
+        },
+      });
+      if (!booking) return new NextResponse("Booking not found", { status: 404 });
+      order = {
+        ref: booking.ref, amountCents: booking.amountCents,
+        itemName: `${booking.course.code} ${booking.course.title}`,
+        name: booking.learner.name, email: booking.learner.email,
+        returnPath: `/booking/${booking.ref}/thanks`, cancelPath: `/booking/${booking.ref}/cancelled`,
+      };
     }
 
     const settings = await prisma.siteSettings.findUnique({ where: { id: "singleton" } });
@@ -27,20 +47,20 @@ export async function GET(req: NextRequest, { params }: { params: { ref: string 
     }
 
     const siteUrl   = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get("host")}`;
-    const nameParts = booking.learner.name.trim().split(/\s+/);
+    const nameParts = order.name.trim().split(/\s+/);
 
     const rawFields: Record<string, string> = {
       merchant_id:   secret.merchantId,
       merchant_key:  secret.merchantKey,
-      return_url:    `${siteUrl}/booking/${booking.ref}/thanks`,
-      cancel_url:    `${siteUrl}/booking/${booking.ref}/cancelled`,
+      return_url:    `${siteUrl}${order.returnPath}`,
+      cancel_url:    `${siteUrl}${order.cancelPath}`,
       notify_url:    `${siteUrl}/api/payfast/notify`,
       name_first:    nameParts[0] || "",
       name_last:     nameParts.slice(1).join(" ") || "",
-      email_address: booking.learner.email,
-      m_payment_id:  booking.ref,
-      amount:        (booking.amountCents / 100).toFixed(2),
-      item_name:     `${booking.course.code} ${booking.course.title}`.slice(0, 100),
+      email_address: order.email,
+      m_payment_id:  order.ref,
+      amount:        (order.amountCents / 100).toFixed(2),
+      item_name:     order.itemName.slice(0, 100),
     };
 
     // Remove empty values before signing and before sending

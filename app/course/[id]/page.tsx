@@ -82,6 +82,11 @@ export default async function CoursePage({ params }: { params: { id: string } })
             <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
               Preview in LMS →
             </Link>
+            {!adminSession && course.price > 0 && (
+              <Link href={`/course/${course.id}/team`} className="mt-2 block text-center text-xs font-semibold text-teal hover:underline">
+                Buying for a team? Pay once for 2–50 seats →
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -93,6 +98,11 @@ export default async function CoursePage({ params }: { params: { id: string } })
         <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
           Preview in LMS →
         </Link>
+        {!adminSession && course.price > 0 && (
+          <Link href={`/course/${course.id}/team`} className="mt-2 block text-center text-xs font-semibold text-teal hover:underline">
+            Buying for a team? Pay once for 2–50 seats →
+          </Link>
+        )}
       </div>
 
       {/* Course body */}

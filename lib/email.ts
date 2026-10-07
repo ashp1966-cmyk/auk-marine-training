@@ -64,6 +64,28 @@ export function paymentConfirmedEmail(name: string, courseTitle: string, ref: st
   </div>`;
 }
 
+const _esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+export function groupOrderAdminEmail(company: string, contactName: string, contactEmail: string, courseTitle: string, seats: number, amountCents: number, ref: string, stage: "started" | "paid") {
+  return `<div style="font-family:sans-serif;max-width:520px">
+    <h2 style="color:#0B2A3D">Team order ${stage === "paid" ? "PAID ✓" : "started"}</h2>
+    <p><b>${_esc(company)}</b> — ${_esc(contactName)} (${_esc(contactEmail)})</p>
+    <p style="background:#f2f6f7;padding:12px;border-radius:8px"><b>${_esc(courseTitle)}</b><br>${seats} seats · R${(amountCents / 100).toLocaleString()} · Ref: ${ref}</p>
+  </div>`;
+}
+
+export function groupPaidEmail(contactName: string, company: string, courseTitle: string, seats: number, ref: string, joinUrl: string, manageUrl: string, domainLock?: string | null) {
+  return `<div style="font-family:sans-serif;max-width:560px">
+    <h2 style="color:#0B2A3D">Team payment confirmed ✓</h2>
+    <p>Hi ${_esc(contactName)},</p>
+    <p>Payment received for <b>${seats} seats</b> on <b>${_esc(courseTitle)}</b> (${_esc(company)}). Ref: <b>${ref}</b>.</p>
+    <p><b>Share this link with your team</b> — each person signs up or signs in, then claims a seat:</p>
+    <p style="background:#f2f6f7;padding:12px;border-radius:8px;word-break:break-all"><a href="${joinUrl}">${joinUrl}</a></p>
+    ${domainLock ? `<p style="font-size:13px;color:#555">Only <b>@${_esc(domainLock)}</b> email addresses can claim a seat.</p>` : ""}
+    <p>Track who has joined and their progress (keep this link private):<br><a href="${manageUrl}">${manageUrl}</a></p>
+  </div>`;
+}
+
 export function facilitatorApplicationAdminEmail(name: string, email: string, role: string) {
   return `<div style="font-family:sans-serif;max-width:520px">
     <h2 style="color:#0B2A3D">New facilitator application</h2>

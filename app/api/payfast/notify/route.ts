@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyItnSignature, validateWithPayfast } from "@/lib/payfast";
-import { sendEmail, paymentConfirmedEmail } from "@/lib/email";
+import { sendEmail, paymentConfirmedEmail, groupPaidEmail, groupOrderAdminEmail } from "@/lib/email";
+import { isGroupRef } from "@/lib/group";
 
 /**
  * PayFast calls THIS endpoint directly, server-to-server, after a payment —
@@ -55,6 +56,42 @@ export async function POST(req: NextRequest) {
   }
 
   const ref = fields.m_payment_id;
+
+  // Team (GRP-) orders: mark paid, then email the buyer the join + manage links.
+  if (isGroupRef(ref)) {
+    const group = await prisma.groupBooking.findUnique({ where: { ref }, include: { course: true } });
+    if (!group) return new NextResponse("booking not found", { status: 404 });
+    const gPaid = Math.round(parseFloat(fields.amount_gross || "0") * 100);
+    if (Math.abs(gPaid - group.amountCents) > 1) {
+      console.warn("PayFast ITN: group amount mismatch", ref, gPaid, group.amountCents);
+      return new NextResponse("amount mismatch", { status: 400 });
+    }
+    if (fields.payment_status === "COMPLETE") {
+      // updateMany so a PayFast retry can't send the emails twice
+      const flipped = await prisma.groupBooking.updateMany({
+        where: { id: group.id, status: { not: "Paid" } },
+        data: { status: "Paid", paidAt: new Date(), payfastPfPaymentId: fields.pf_payment_id || null },
+      });
+      if (flipped.count === 1) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get("host")}`;
+        sendEmail({
+          to: group.contactEmail,
+          subject: `Team payment received — ${group.course.code}`,
+          html: groupPaidEmail(group.contactName, group.company, group.course.title, group.seats, group.ref,
+            `${siteUrl}/join/${group.joinToken}`, `${siteUrl}/group/${group.manageToken}`, group.domainLock),
+        }).catch(() => {});
+        if (settings?.notifyEmail) {
+          sendEmail({
+            to: settings.notifyEmail,
+            subject: `Team order PAID — ${group.ref}`,
+            html: groupOrderAdminEmail(group.company, group.contactName, group.contactEmail, group.course.title, group.seats, group.amountCents, group.ref, "paid"),
+          }).catch(() => {});
+        }
+      }
+    }
+    return new NextResponse("OK", { status: 200 });
+  }
+
   const booking = await prisma.booking.findUnique({ where: { ref } });
   if (!booking) return new NextResponse("booking not found", { status: 404 });
 

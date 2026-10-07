@@ -59,6 +59,7 @@ model Course {
   bookings      Booking[]
   enrollments   Enrollment[]
   certificates  Certificate[]
+  groupBookings GroupBooking[]
 }
 
 model Session {
@@ -86,6 +87,7 @@ model Learner {
   bookings     Booking[]
   enrollments  Enrollment[]
   certificates Certificate[]
+  groupSeats   GroupSeat[]
 }
 
 model Booking {
@@ -245,4 +247,40 @@ model Certificate {
   revokedReason String?
 
   @@unique([learnerId, courseId])
+}
+
+// Company / team purchase: one PayFast payment buys N seats on one course.
+// `ref` (GRP-XXXXXX) is the PayFast m_payment_id. `joinToken` is the shareable
+// link employees use; `manageToken` is the buyer's private dashboard link.
+model GroupBooking {
+  id            String      @id @default(cuid())
+  ref           String      @unique
+  joinToken     String      @unique @default(cuid())
+  manageToken   String      @unique @default(cuid())
+  courseId      String
+  course        Course      @relation(fields: [courseId], references: [id])
+  company       String
+  contactName   String
+  contactEmail  String
+  contactPhone  String?
+  seats         Int
+  claimed       Int         @default(0)
+  amountCents   Int
+  domainLock    String?     // e.g. "acme.co.za" — only emails on this domain may claim
+  status        String      @default("Pending") // Pending | Paid | Cancelled
+  payfastPfPaymentId String?
+  paidAt        DateTime?
+  createdAt     DateTime    @default(now())
+  claims        GroupSeat[]
+}
+
+model GroupSeat {
+  id         String       @id @default(cuid())
+  groupId    String
+  group      GroupBooking @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  learnerId  String
+  learner    Learner      @relation(fields: [learnerId], references: [id])
+  createdAt  DateTime     @default(now())
+
+  @@unique([groupId, learnerId])
 }

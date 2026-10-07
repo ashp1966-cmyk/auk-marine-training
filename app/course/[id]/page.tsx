@@ -73,6 +73,11 @@ export default async function CoursePage({ params }: { params: { id: string } })
 
           {/* Sidebar: admin → preview card, enrolled learner → LMS card, else → booking form */}
           <div className="hidden lg:block">
+            {!adminSession && course.price > 0 && (
+              <Link href={`/course/${course.id}/team`} className="mb-3 block rounded-lg bg-teal px-4 py-3 text-center text-base font-bold text-white shadow transition hover:bg-teal/90">
+                👥 Buying for a team? Pay once for 2–50 seats →
+              </Link>
+            )}
             <div className="rounded-xl overflow-hidden shadow-xl">
               {thumb
                 ? <img src={thumb} alt={course.title} className="h-40 w-full object-cover" />
@@ -82,27 +87,22 @@ export default async function CoursePage({ params }: { params: { id: string } })
             <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
               Preview in LMS →
             </Link>
-            {!adminSession && course.price > 0 && (
-              <Link href={`/course/${course.id}/team`} className="mt-2 block text-center text-xs font-semibold text-teal hover:underline">
-                Buying for a team? Pay once for 2–50 seats →
-              </Link>
-            )}
           </div>
         </div>
       </div>
 
       {/* Mobile card */}
       <div className="mx-auto max-w-xl px-5 pt-6 lg:hidden">
+        {!adminSession && course.price > 0 && (
+          <Link href={`/course/${course.id}/team`} className="mb-3 block rounded-lg bg-teal px-4 py-3 text-center text-base font-bold text-white shadow transition hover:bg-teal/90">
+            👥 Buying for a team? Pay once for 2–50 seats →
+          </Link>
+        )}
         {thumb && <img src={thumb} alt={course.title} className="h-40 w-full rounded-xl object-cover mb-4" />}
         <SidebarCard />
         <Link href={`/course/${course.id}/learn`} className="mt-2 block text-center text-xs text-teal hover:underline">
           Preview in LMS →
         </Link>
-        {!adminSession && course.price > 0 && (
-          <Link href={`/course/${course.id}/team`} className="mt-2 block text-center text-xs font-semibold text-teal hover:underline">
-            Buying for a team? Pay once for 2–50 seats →
-          </Link>
-        )}
       </div>
 
       {/* Course body */}

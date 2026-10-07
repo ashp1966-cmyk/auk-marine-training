@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function Thanks({ params }: { params: { ref: string } }) {
       )}
       <p className="mt-6 text-xs text-gray-400">You will be redirected to your course automatically.</p>
       {/* Auto-refresh every 3 seconds until enrollment is ready */}
-      <meta httpEquiv="refresh" content="3" />
+      <AutoRefresh ms={3000} />
     </main>
   );
 }

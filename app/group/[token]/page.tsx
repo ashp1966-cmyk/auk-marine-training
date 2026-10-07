@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
 import Link from "next/link";
 import GroupManageClient from "@/components/GroupManageClient";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: false } };
@@ -39,7 +40,7 @@ export default async function GroupManage({ params, searchParams }: { params: { 
           If you've just paid, this page updates by itself within a minute.</p>
         <Link href={`/api/payfast/form/${group.ref}`} className="mt-5 inline-block text-sm text-teal underline">Not paid yet? Continue to PayFast</Link>
         <p className="mt-4 font-mono text-xs text-gray-400">{group.ref}</p>
-        <meta httpEquiv="refresh" content="5" />
+        <AutoRefresh ms={4000} />
       </main>
     );
   }

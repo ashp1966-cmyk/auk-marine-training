@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: { ref: string 
         ref: g.ref, amountCents: g.amountCents,
         itemName: `${g.course.code} ${g.course.title} x${g.seats} seats`,
         name: g.contactName, email: g.contactEmail,
-        returnPath: `/group/${g.manageToken}`, cancelPath: `/group/${g.manageToken}`,
+        returnPath: `/group/${g.manageToken}`, cancelPath: `/group/${g.manageToken}?cancelled=1`,
       };
     } else {
       const booking = await prisma.booking.findFirst({

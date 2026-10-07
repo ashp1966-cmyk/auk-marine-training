@@ -6,7 +6,7 @@ import GroupManageClient from "@/components/GroupManageClient";
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: false } };
 
-export default async function GroupManage({ params }: { params: { token: string } }) {
+export default async function GroupManage({ params, searchParams }: { params: { token: string }; searchParams: { cancelled?: string } }) {
   const group = await prisma.groupBooking.findUnique({
     where: { manageToken: params.token },
     include: { course: true, claims: { include: { learner: true }, orderBy: { createdAt: "asc" } } },
@@ -19,6 +19,18 @@ export default async function GroupManage({ params }: { params: { token: string 
   const rand = (c: number) => `R${(c / 100).toLocaleString("en-ZA")}`;
 
   if (group.status !== "Paid") {
+    const cancelled = searchParams?.cancelled === "1";
+    if (cancelled) {
+      return (
+        <main className="mx-auto max-w-md px-5 py-20 text-center">
+          <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-gray-200 text-3xl">✕</div>
+          <h1 className="font-serif text-2xl font-bold text-hull">Payment cancelled</h1>
+          <p className="mt-3 text-sm text-gray-500">Nothing was charged.<br />{group.seats} seats · {group.course.title} · {rand(group.amountCents)}</p>
+          <Link href={`/api/payfast/form/${group.ref}`} className="btn-primary mt-6 inline-flex justify-center">Try payment again →</Link>
+          <p className="mt-4 font-mono text-xs text-gray-400">{group.ref}</p>
+        </main>
+      );
+    }
     return (
       <main className="mx-auto max-w-md px-5 py-20 text-center">
         <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-teal text-3xl text-white animate-pulse">⏳</div>

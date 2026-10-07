@@ -12,6 +12,7 @@ test("seat count limited to 2–50 integers", () => {
 });
 test("domain normalisation", () => {
   assert.equal(normaliseDomain(" @Acme.CO.za "), "acme.co.za");
+  assert.equal(normaliseDomain("jo@Acme.co.za"), "acme.co.za"); // pasted email → domain
   assert.equal(normaliseDomain(""), null);
   assert.equal(normaliseDomain("not a domain"), null);
   assert.equal(normaliseDomain("nodot"), null);

@@ -21,9 +21,10 @@ export function validSeatCount(n: unknown): n is number {
   return Number.isInteger(n) && (n as number) >= GROUP_MIN_SEATS && (n as number) <= GROUP_MAX_SEATS;
 }
 
-/** "@Acme.co.za", "acme.co.za " → "acme.co.za". Returns null if blank/invalid. */
+/** "@Acme.co.za", "acme.co.za ", "jo@acme.co.za" → "acme.co.za". Returns null if blank/invalid. */
 export function normaliseDomain(raw: unknown): string | null {
-  const d = String(raw ?? "").trim().toLowerCase().replace(/^@/, "");
+  let d = String(raw ?? "").trim().toLowerCase();
+  if (d.includes("@")) d = d.slice(d.lastIndexOf("@") + 1);
   if (!d) return null;
   return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(d) ? d : null;
 }

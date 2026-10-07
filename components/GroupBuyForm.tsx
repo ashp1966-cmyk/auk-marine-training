@@ -51,7 +51,7 @@ export default function GroupBuyForm({ courseId, priceCents, minSeats, maxSeats 
           <input className={inputCls} type="number" min={minSeats} max={maxSeats} value={Number.isNaN(seats) ? "" : seats}
             onChange={(e) => setSeats(parseInt(e.target.value, 10))} /></div>
         <div><label className={labelCls}>Restrict to company email domain (optional)</label>
-          <input className={inputCls} value={domainLock} onChange={(e) => setDomainLock(e.target.value)} placeholder="company.co.za" />
+          <input className={inputCls} name="allowed-domain" autoComplete="off" value={domainLock} onChange={(e) => setDomainLock(e.target.value)} placeholder="company.co.za" />
           <p className="mt-1 text-xs text-gray-400">If set, only staff with an @company.co.za address can claim a seat.</p></div>
 
         <div className="rounded-lg bg-gray-50 p-4 text-sm">

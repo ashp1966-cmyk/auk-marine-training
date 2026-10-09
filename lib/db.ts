@@ -37,10 +37,8 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 function createPrismaClient() {
   const connectionString = process.env.AUK_DB_URL || process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not set — check .env is present and loaded");
+    throw new Error("AUK_DB_URL / DATABASE_URL is not set — check .env is present and loaded");
   }
-  // TEMPORARY DIAGNOSTIC - remove after debugging (never logs the password)
-  try { const u = new URL(connectionString); console.log("DBCHECK using=" + (process.env.AUK_DB_URL ? "AUK_DB_URL" : "DATABASE_URL") + " host=" + u.host + " user=" + u.username + " pwlen=" + u.password.length + " search=" + u.search + " rawlen=" + connectionString.length + " first=" + JSON.stringify(connectionString.slice(0,12)) + " last=" + JSON.stringify(connectionString.slice(-5))); } catch (e) { console.log("DBCHECK invalid url"); }
   const pool = new Pool({ connectionString });
   const adapter = new PrismaNeon(pool);
   return new PrismaClient({ adapter });

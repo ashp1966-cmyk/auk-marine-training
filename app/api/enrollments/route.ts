@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getLearnerSession } from "@/lib/learnerAuth";
+import { canEnrol } from "@/lib/entitlement";
 
 /**
  * Email normalisation.
@@ -24,34 +26,46 @@ function looksLikeEmail(e: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const email = normaliseEmail(body.email);
+  // Enrolment requires a signed-in learner, and the learner is taken from the
+  // session — never from the request body — so nobody can enrol someone else.
+  const session = await getLearnerSession();
+  if (!session) return NextResponse.json({ ok: false, error: "Please sign in" }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
   const courseId = body.courseId;
-  const name = String(body.name ?? "").trim().replace(/\s+/g, " ");
+  if (!courseId) return NextResponse.json({ ok: false, error: "courseId required" }, { status: 400 });
 
-  if (!email || !courseId) {
-    return NextResponse.json({ ok: false, error: "email and courseId required" }, { status: 400 });
-  }
+  const learner = await prisma.learner.findUnique({ where: { id: session.learnerId } });
+  if (!learner) return NextResponse.json({ ok: false, error: "Please sign in" }, { status: 401 });
 
-  // Catches the transposed-fields case — a learner once ended up with the
-  // password in `email` and the email address in `name`, which then printed
-  // on a certificate.
-  if (!looksLikeEmail(email)) {
-    return NextResponse.json({ ok: false, error: "Enter a valid email address" }, { status: 400 });
-  }
-
-  const learner = await prisma.learner.upsert({
-    where: { email },
-    update: {},
-    create: { name: name || email.split("@")[0], email },
-  });
-
-  const enrollment = await prisma.enrollment.upsert({
+  // Already enrolled (paid booking, team seat or free course created it): just return it.
+  const existing = await prisma.enrollment.findUnique({
     where: { learnerId_courseId: { learnerId: learner.id, courseId } },
-    update: {},
-    create: { learnerId: learner.id, courseId },
   });
+  if (existing) {
+    return NextResponse.json({ ok: true, enrollment: existing, learnerId: learner.id, learnerName: learner.name });
+  }
 
+  const course = await prisma.course.findUnique({ where: { id: courseId }, select: { price: true } });
+  if (!course) return NextResponse.json({ ok: false, error: "Course not found" }, { status: 404 });
+
+  const [bookings, seat] = await Promise.all([
+    prisma.booking.findMany({ where: { learnerId: learner.id, courseId }, select: { status: true } }),
+    prisma.groupSeat.findFirst({ where: { learnerId: learner.id, group: { courseId, status: "Paid" } }, select: { id: true } }),
+  ]);
+  const allowed = canEnrol({
+    coursePriceCents: course.price,
+    bookingStatuses: bookings.map((b) => b.status),
+    hasGroupSeat: !!seat,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { ok: false, error: "No paid booking found for this course. Please book and pay first." },
+      { status: 403 }
+    );
+  }
+
+  const enrollment = await prisma.enrollment.create({ data: { learnerId: learner.id, courseId } });
   return NextResponse.json({ ok: true, enrollment, learnerId: learner.id, learnerName: learner.name });
 }
 
@@ -63,31 +77,38 @@ export async function POST(req: NextRequest) {
 // so now that enrollments gate certificate issue. Worth moving behind
 // getLearnerSession() when there is time.
 export async function GET(req: NextRequest) {
+  const session = await getLearnerSession();
+  if (!session) return NextResponse.json({ ok: false, error: "Please sign in" }, { status: 401 });
+
   const learnerId = req.nextUrl.searchParams.get("learnerId");
   const courseId = req.nextUrl.searchParams.get("courseId");
 
   // Single enrollment check — used by BookingForm and course page
   if (learnerId && courseId) {
+    if (learnerId !== session.learnerId) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     const enrollment = await prisma.enrollment.findUnique({
       where: { learnerId_courseId: { learnerId, courseId } },
     });
     return NextResponse.json({ ok: true, enrolled: !!enrollment, enrollment: enrollment || null });
   }
 
-  const email = normaliseEmail(req.nextUrl.searchParams.get("email"));
-  if (!email) return NextResponse.json({ ok: false, error: "email required" }, { status: 400 });
-  const learner = await prisma.learner.findUnique({ where: { email } });
-  if (!learner) return NextResponse.json({ ok: true, enrollments: [] });
+  // A learner may only list their own enrollments.
+  const email = normaliseEmail(req.nextUrl.searchParams.get("email") || session.email);
+  if (email !== normaliseEmail(session.email)) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   const enrollments = await prisma.enrollment.findMany({
-    where: { learnerId: learner.id },
+    where: { learnerId: session.learnerId },
     include: { course: true },
   });
   return NextResponse.json({ ok: true, enrollments });
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await getLearnerSession();
+  if (!session) return NextResponse.json({ ok: false, error: "Please sign in" }, { status: 401 });
+
   const { learnerId, courseId, progress, quizScore, completedModules, notes } = await req.json();
   if (!learnerId || !courseId) return NextResponse.json({ ok: false, error: "Missing ids" }, { status: 400 });
+  if (learnerId !== session.learnerId) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
   // Partial update — only touch fields actually sent, so a notes-only
   // autosave never wipes progress, and progress saves never wipe notes.
@@ -97,10 +118,15 @@ export async function PUT(req: NextRequest) {
   if (completedModules !== undefined) data.completedModules = completedModules;
   if (notes !== undefined) data.notes = String(notes).slice(0, 20000);
 
-  const enrollment = await prisma.enrollment.upsert({
+  // Update only — never create. An enrollment must come from a payment, a team
+  // seat or a free course, not from a progress save.
+  const existing = await prisma.enrollment.findUnique({
     where: { learnerId_courseId: { learnerId, courseId } },
-    update: data,
-    create: { learnerId, courseId, progress: progress ?? 0, quizScore, completedModules: completedModules ?? [], notes: notes ?? "" },
+  });
+  if (!existing) return NextResponse.json({ ok: false, error: "Not enrolled" }, { status: 404 });
+  const enrollment = await prisma.enrollment.update({
+    where: { learnerId_courseId: { learnerId, courseId } },
+    data,
   });
   return NextResponse.json({ ok: true, enrollment });
 }

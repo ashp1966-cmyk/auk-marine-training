@@ -34,6 +34,7 @@ export default function CoursePlayer() {
   const [quizChecked, setQuizChecked] = useState(false);
   const [retaking, setRetaking]     = useState(false);
   const [started, setStarted]       = useState(false);
+  const [gate, setGate]             = useState<"checking" | "signin" | "denied">("checking");
   const [navOpen, setNavOpen]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [notes, setNotes]           = useState("");
@@ -57,25 +58,20 @@ export default function CoursePlayer() {
     fetch(`/api/courses/${id}`).then((r) => r.json()).then((d) => setCourse(d.course));
     fetch("/api/learner/me", { credentials: "include" }).then((r) => r.json()).then((d) => {
       if (d.signedIn) { setEmail(d.learner.email); setName(d.learner.name); autoStart(d.learner.email, d.learner.name); }
+      else setGate("signin");
     });
   }, [id]);
 
-  async function autoStart(em: string, nm: string) {
+  // The server decides who may enrol: a signed-in learner with a paid booking,
+  // a claimed team seat, or a free course. Nothing here can bypass that.
+  async function autoStart(_em: string, _nm: string) {
     const res = await fetch("/api/enrollments", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: em, name: nm, courseId: id }),
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId: id }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (data.ok) { setEnrollment({ ...data.enrollment, learnerId: data.learnerId }); setStarted(true); }
-  }
-
-  async function start() {
-    const res = await fetch("/api/enrollments", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, name, courseId: id }),
-    });
-    const data = await res.json();
-    if (data.ok) { setEnrollment({ ...data.enrollment, learnerId: data.learnerId }); setStarted(true); }
+    else setGate(res.status === 401 ? "signin" : "denied");
   }
 
   const modules: Module[] = course?.modules || [];
@@ -132,11 +128,20 @@ export default function CoursePlayer() {
     return (
       <main className="mx-auto max-w-md px-5 py-16">
         <div className="card p-6">
-          <h1 className="font-serif text-xl font-bold">Continue "{course.title}"</h1>
-          <p className="mt-2 text-sm text-gray-500">Enter the email you booked with to load your progress.</p>
-          <input className="mt-3 w-full rounded-md border border-gray-300 px-3 py-2" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button className="btn-primary mt-3 w-full justify-center" onClick={start} disabled={!email}>Start / continue →</button>
+          <h1 className="font-serif text-xl font-bold">{course.title}</h1>
+          {gate === "checking" && <p className="mt-2 text-sm text-gray-500">Checking your access…</p>}
+          {gate === "signin" && (
+            <>
+              <p className="mt-2 text-sm text-gray-500">Sign in to continue this course.</p>
+              <Link href="/learn" className="btn-primary mt-4 w-full justify-center">Sign in →</Link>
+            </>
+          )}
+          {gate === "denied" && (
+            <>
+              <p className="mt-2 text-sm text-gray-500">We couldn't find a paid booking or team seat for this course on your account.</p>
+              <Link href={`/course/${id}`} className="btn-primary mt-4 w-full justify-center">View course and book →</Link>
+            </>
+          )}
         </div>
       </main>
     );

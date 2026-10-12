@@ -12,10 +12,14 @@ export default async function Thanks({ params }: { params: { ref: string } }) {
 
   // If payment confirmed and enrollment exists → go straight to the LMS player
   if (booking?.status === "Paid" || booking?.status === "Confirmed" || booking?.status === "Enrolled") {
-    const enrollment = await prisma.enrollment.findUnique({
+    // A paid booking always entitles the learner, so create the enrolment if it
+    // is missing (self-heals a payment whose enrolment step did not run).
+    await prisma.enrollment.upsert({
       where: { learnerId_courseId: { learnerId: booking.learnerId, courseId: booking.courseId } },
+      update: {},
+      create: { learnerId: booking.learnerId, courseId: booking.courseId },
     });
-    if (enrollment) redirect(`/course/${booking.courseId}/learn`);
+    redirect(`/course/${booking.courseId}/learn`);
   }
 
   // Still processing — show a brief holding page that auto-refreshes

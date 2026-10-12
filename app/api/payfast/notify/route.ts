@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyItnSignature, validateWithPayfast } from "@/lib/payfast";
 import { sendEmail, paymentConfirmedEmail, groupPaidEmail, groupOrderAdminEmail } from "@/lib/email";
 import { isGroupRef } from "@/lib/group";
+import { isPayfastIp } from "@/lib/payfastIp";
 
 /**
  * PayFast calls THIS endpoint directly, server-to-server, after a payment —
@@ -17,20 +18,12 @@ import { isGroupRef } from "@/lib/group";
  * Worth adding before very high-value transactions:
  * https://developers.payfast.co.za/docs#step_3_confirm_payment
  */
-// PayFast published source IPs (sandbox and live) — updated July 2025
-// https://developers.payfast.co.za/docs#step_3_confirm_payment
-const PAYFAST_IPS = new Set([
-  "197.97.145.144", "197.97.145.145", "197.97.145.146", "197.97.145.147",
-  "196.33.227.224", "196.33.227.225", "196.33.227.226", "196.33.227.227",
-  "41.74.179.192",  "41.74.179.193",  "41.74.179.194",  "41.74.179.195",
-]);
-
 export async function POST(req: NextRequest) {
   // Verify the request comes from a known PayFast IP
   const forwarded = req.headers.get("x-forwarded-for") ?? "";
   const clientIp  = forwarded.split(",")[0].trim();
   const isSandbox = (await prisma.siteSettings.findUnique({ where: { id: "singleton" } }))?.payfastMode === "sandbox";
-  if (!isSandbox && !PAYFAST_IPS.has(clientIp)) {
+  if (!isSandbox && !(await isPayfastIp(clientIp))) {
     console.warn("PayFast ITN: rejected from unknown IP", clientIp);
     return new NextResponse("forbidden", { status: 403 });
   }

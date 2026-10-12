@@ -11,6 +11,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { ref: strin
     where: { ref: params.ref },
     data: { status: body.status },
   });
+  // Marking a booking Paid/Confirmed/Enrolled by hand must also give the
+  // learner their enrolment, otherwise they pay and still cannot start.
+  if (["Paid", "Confirmed", "Enrolled"].includes(booking.status)) {
+    await prisma.enrollment.upsert({
+      where: { learnerId_courseId: { learnerId: booking.learnerId, courseId: booking.courseId } },
+      update: {},
+      create: { learnerId: booking.learnerId, courseId: booking.courseId },
+    });
+  }
   return NextResponse.json({ ok: true, booking });
 }
 

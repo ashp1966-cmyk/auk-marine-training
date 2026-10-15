@@ -22,6 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <p className="mt-4">
               Northlands Corner, North Riding, Johannesburg 2169 · <a href="mailto:training@auk-maritime.com" className="underline">training@auk-maritime.com</a>
             </p>
+            <p className="mt-2">
+              <a href="/terms" className="underline">Terms of Service</a> · <a href="/privacy" className="underline">Privacy Policy</a>
+            </p>
           </div>
         </footer>
       </body>

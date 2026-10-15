@@ -14,6 +14,9 @@ export default function BookingForm({ course }: { course: any }) {
   const [phone, setPhone]     = useState("");
   const [org, setOrg]         = useState("");
   const [consent, setConsent] = useState(false);
+  const [accept, setAccept]   = useState(false);
+  const [password, setPassword] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
   const [busy, setBusy]       = useState(false);
   const [error, setError]     = useState("");
   const [ref, setRef]         = useState("");
@@ -24,6 +27,7 @@ export default function BookingForm({ course }: { course: any }) {
       .then((r) => r.json())
       .then((d) => {
         if (d.signedIn) {
+          setSignedIn(true);
           setName(d.learner.name);
           setEmail(d.learner.email);
           // Check if already enrolled — if so redirect straight to LMS
@@ -42,6 +46,25 @@ export default function BookingForm({ course }: { course: any }) {
     setBusy(true);
     setError("");
     try {
+      // A learner needs an account (and a session) to reach the course after
+      // paying, so a first-time buyer creates their password here. Signing up
+      // also signs them in, and the cookie survives the PayFast round trip.
+      if (!signedIn) {
+        if (password.length < 8) { setError("Choose a password of at least 8 characters"); setBusy(false); return; }
+        const su = await fetch("/api/learner/signup", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password, consent }),
+        });
+        const sd = await su.json().catch(() => ({}));
+        if (!sd.ok) {
+          setError(su.status === 409
+            ? "You already have an account with this email. Please sign in at My Learning first, then book."
+            : (sd.error || "Could not create your account"));
+          setBusy(false); return;
+        }
+        setSignedIn(true);
+      }
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -49,7 +72,7 @@ export default function BookingForm({ course }: { course: any }) {
           courseId: course.id,
           mode: "online",
           seats: 1,
-          name, email, phone, org, consent,
+          name, email, phone, org, consent, acceptTerms: accept,
           method: isFree ? "free" : "payfast",
         }),
       });
@@ -87,6 +110,14 @@ export default function BookingForm({ course }: { course: any }) {
         <span>{course.durationLabel}</span>
       </div>
 
+      {/* Team purchase — prominent, right under the price */}
+      {!isFree && (
+        <a href={`/course/${course.id}/team`}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border-2 border-teal px-3 py-2 text-sm font-bold text-teal transition hover:bg-teal hover:text-white">
+          👥 Buy for a team · 2–50 seats
+        </a>
+      )}
+
       {/* PayFast not configured warning */}
       {!isFree && course._payfastEnabled === false && (
         <p className="mt-3 text-xs text-red-500">PayFast is not configured yet — ask AUK Marine to set it up in Settings</p>
@@ -109,19 +140,30 @@ export default function BookingForm({ course }: { course: any }) {
           <label className={labelCls}>Organisation</label>
           <input className={inputCls} value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Company / institution" />
         </div>
+        {!signedIn && (
+          <div>
+            <label className={labelCls}>Create a password *</label>
+            <input className={inputCls} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+            <p className="mt-1 text-xs text-gray-400">You'll use this with your email to sign in to your course.</p>
+          </div>
+        )}
         <label className="flex gap-2 text-xs text-gray-600 leading-relaxed">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 flex-shrink-0" />
           I consent to AUK Marine processing my information to manage this booking (POPIA).
+        </label>
+        <label className="flex gap-2 text-xs text-gray-600 leading-relaxed">
+          <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 flex-shrink-0" />
+          <span>I have read and accept the <a href="/terms" target="_blank" rel="noopener" className="underline">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener" className="underline">Privacy Policy</a>. *</span>
         </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button
           className="btn-primary w-full justify-center"
-          disabled={busy || !name || !email || !consent}
+          disabled={busy || !name || !email || !consent || !accept || (!signedIn && password.length < 8)}
           onClick={submit}>
           {busy ? "Processing…" : isFree ? "Enrol now — free" : `Pay R${(course.price / 100).toLocaleString()} →`}
         </button>
-        <p className="text-center text-xs text-gray-400">Already have an account? Your progress will be linked automatically.</p>
+        <p className="text-center text-xs text-gray-400">Already have an account? <a href="/learn" className="underline">Sign in first</a> and your progress is linked automatically.</p>
       </div>
     </div>
   );

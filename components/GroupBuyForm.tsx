@@ -12,6 +12,7 @@ export default function GroupBuyForm({ courseId, priceCents, minSeats, maxSeats 
   const [seats, setSeats] = useState(10);
   const [domainLock, setDomainLock] = useState("");
   const [consent, setConsent] = useState(false);
+  const [accept, setAccept] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,7 +25,7 @@ export default function GroupBuyForm({ courseId, priceCents, minSeats, maxSeats 
     try {
       const res = await fetch("/api/group", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId, company, contactName, contactEmail, contactPhone, seats, domainLock, consent }),
+        body: JSON.stringify({ courseId, company, contactName, contactEmail, contactPhone, seats, domainLock, consent, acceptTerms: accept }),
       });
       const data = await res.json();
       if (!data.ok) { setError(data.error || "Something went wrong"); setBusy(false); return; }
@@ -63,9 +64,13 @@ export default function GroupBuyForm({ courseId, priceCents, minSeats, maxSeats 
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 flex-shrink-0" />
           I consent to AUK Marine processing this company's information to manage this order (POPIA).
         </label>
+        <label className="flex gap-2 text-xs text-gray-600 leading-relaxed">
+          <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 flex-shrink-0" />
+          <span>I have read and accept the <a href="/terms" target="_blank" rel="noopener" className="underline">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener" className="underline">Privacy Policy</a>. *</span>
+        </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button className="btn-primary w-full justify-center"
-          disabled={busy || !seatsOk || !company || !contactName || !contactEmail || !consent} onClick={submit}>
+          disabled={busy || !seatsOk || !company || !contactName || !contactEmail || !consent || !accept} onClick={submit}>
           {busy ? "Processing…" : seatsOk ? `Pay ${rand(total)} →` : "Pay →"}
         </button>
         <p className="text-center text-xs text-gray-400">After payment you get one link to share with your team.</p>

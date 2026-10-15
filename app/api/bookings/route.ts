@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { sendEmail, bookingReceivedEmail } from "@/lib/email";
+import { TERMS_VERSION } from "@/lib/legalContent";
 
 // POST /api/bookings — create a booking (public, used by BookingForm)
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { courseId, mode, seats, date, name, email, phone, org, consent, method } = body;
+  const { courseId, mode, seats, date, name, email, phone, org, consent, method, acceptTerms } = body;
 
   if (!courseId || !name || !email || !consent) {
     return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
+  }
+
+  if (acceptTerms !== true) {
+    return NextResponse.json({ ok: false, error: "Please accept the Terms of Service and Privacy Policy to continue" }, { status: 400 });
   }
 
   const course = await prisma.course.findUnique({ where: { id: courseId } });
@@ -38,6 +43,8 @@ export async function POST(req: NextRequest) {
       amountCents: course.price,
       method: isFree ? "free" : (method || "payfast"),
       status: isFree ? "Confirmed" : "Pending",
+      termsAcceptedAt: new Date(),
+      termsVersion: TERMS_VERSION,
     },
   });
 

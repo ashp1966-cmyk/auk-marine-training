@@ -104,6 +104,8 @@ model Booking {
   method        String   @default("payfast") // payfast | eft | free
   status        String   @default("Pending")  // Pending | Confirmed | Paid | Invoice sent | Enrolled | Cancelled
   payfastPfPaymentId String?
+  termsAcceptedAt DateTime?
+  termsVersion    String?
   createdAt     DateTime @default(now())
 }
 
@@ -270,6 +272,8 @@ model GroupBooking {
   status        String      @default("Pending") // Pending | Paid | Cancelled
   payfastPfPaymentId String?
   paidAt        DateTime?
+  termsAcceptedAt DateTime?
+  termsVersion    String?
   createdAt     DateTime    @default(now())
   claims        GroupSeat[]
 }

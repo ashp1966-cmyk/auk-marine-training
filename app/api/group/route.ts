@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { GROUP_MIN_SEATS, GROUP_MAX_SEATS, groupAmountCents, newGroupRef, normaliseDomain, validSeatCount } from "@/lib/group";
 import { sendEmail, groupOrderAdminEmail } from "@/lib/email";
+import { TERMS_VERSION } from "@/lib/legalContent";
 
 // POST /api/group — create a pending team order. The browser is then sent to
 // /api/payfast/form/<ref>; seats only become claimable once PayFast's ITN
@@ -24,6 +25,9 @@ export async function POST(req: NextRequest) {
   if (!b.courseId || !company || !contactName || !b.consent) {
     return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
   }
+  if (b.acceptTerms !== true) {
+    return NextResponse.json({ ok: false, error: "Please accept the Terms of Service and Privacy Policy to continue" }, { status: 400 });
+  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
     return NextResponse.json({ ok: false, error: "Enter a valid contact email" }, { status: 400 });
   }
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest) {
     data: {
       ref: newGroupRef(), courseId: course.id, company, contactName, contactEmail,
       contactPhone: contactPhone || null, seats, amountCents, domainLock,
+      termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION,
     },
   });
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import BookingForm from "@/components/BookingForm";
 import { getLearnerSession } from "@/lib/learnerAuth";
 import { getAdminSession } from "@/lib/auth";
+import { redactCourse } from "@/lib/courseAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function CoursePage({ params }: { params: { id: string } })
   function SidebarCard() {
     if (adminSession) return <AdminPreviewCard courseId={course.id} published={course.published} />;
     if (enrollment)   return <EnrolledCard courseId={course.id} progress={enrollment.progress} />;
-    return <BookingForm course={{ ...course, _payfastEnabled: settings?.payfastEnabled }} />;
+    return <BookingForm course={{ ...redactCourse(course), _payfastEnabled: settings?.payfastEnabled }} />;
   }
 
   return (
@@ -131,23 +132,12 @@ export default async function CoursePage({ params }: { params: { id: string } })
                 <span className="text-xs text-gray-400">{modules.length} lessons</span>
               </div>
               <div className="mt-4 divide-y divide-gray-100">
-                {modules.map((m, i) => {
-                  const mins = Math.max(2, Math.round((m.content || "").split(/\s+/).length / 180));
-                  return (
-                    <details key={i} className="group py-3">
-                      <summary className="flex cursor-pointer items-center justify-between gap-2 text-sm font-semibold list-none">
-                        <span className="flex items-center gap-2">
-                          <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-gray-200 text-xs text-gray-400">{i + 1}</span>
-                          {m.title}
-                        </span>
-                        <span className="flex-shrink-0 text-xs text-gray-400">{mins} min</span>
-                      </summary>
-                      {m.content && (
-                        <p className="mt-2 pl-8 text-sm text-gray-500 leading-relaxed">{m.content}</p>
-                      )}
-                    </details>
-                  );
-                })}
+                {modules.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2 py-3 text-sm font-semibold">
+                    <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-gray-200 text-xs text-gray-400">{i + 1}</span>
+                    {m.title}
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { redactCourse } from "@/lib/courseAccess";
 
 // Public: anyone can browse published courses — no admin data is exposed here.
 export async function GET(req: NextRequest) {
@@ -19,7 +20,8 @@ export async function GET(req: NextRequest) {
     include: { provider: true, sessions: true },
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json({ ok: true, courses });
+  // The public list never carries lesson content; admins (?all=1) see everything.
+  return NextResponse.json({ ok: true, courses: includeUnpublished ? courses : courses.map(redactCourse) });
 }
 
 // Admin only: create a course. A scoped admin can only create it under their own

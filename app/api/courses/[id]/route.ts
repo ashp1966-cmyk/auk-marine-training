@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { canViewFullCourse, redactCourse } from "@/lib/courseAccess";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const course = await prisma.course.findUnique({
@@ -8,7 +9,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: { provider: true, sessions: true },
   });
   if (!course) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-  return NextResponse.json({ ok: true, course });
+  // Anyone can read the outline; only entitled learners and admins get the content.
+  const full = await canViewFullCourse({ id: course.id, price: course.price });
+  return NextResponse.json({ ok: true, course: full ? course : redactCourse(course) });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

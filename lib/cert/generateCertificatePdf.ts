@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "pdf-lib";
 import fs from "node:fs/promises";
 import path from "node:path";
+import QRCode from "qrcode";
 import { formatCompletionDates } from "./formatDates";
 
 /**
@@ -182,11 +183,13 @@ export async function generateCertificatePdf(data: CertificateData): Promise<Uin
   drawCentred(page, formatCompletionDates(data.startedOn, data.completedOn), sans, 11, y, MUTED);
 
   // ── Certificate number ───────────────────────────────────────────────────
-  y = 250;
+  // Sits well above the signature: it used to be drawn at y=250 and the
+  // signature image printed over the text.
+  y = 330;
   drawCentred(page, `Certificate Number: ${data.certNumber}`, sans, 12, y, HULL);
 
   // ── Signature ────────────────────────────────────────────────────────────
-  y -= 52;
+  y = 198;
   const sigBytes = await readAsset("signature.png");
   if (sigBytes) {
     try {
@@ -227,6 +230,18 @@ export async function generateCertificatePdf(data: CertificateData): Promise<Uin
   page.drawText(`Verify at ${base}/verify/${data.verifyToken}`, {
     x: 60, y: fy - 4, size: 7, font: sans, color: TEAL,
   });
+
+  // QR code to the verification page, so anyone holding the printed certificate
+  // can check it is genuine.
+  try {
+    const qrPng = await QRCode.toBuffer(`https://${base}/verify/${data.verifyToken}`, { margin: 1, width: 240, errorCorrectionLevel: "M" });
+    const qr = await pdf.embedPng(qrPng);
+    const qrSize = 54;
+    page.drawImage(qr, { x: 339, y: 56, width: qrSize, height: qrSize });
+    page.drawText("Scan to verify", { x: 339, y: 46, size: 7, font: sans, color: MUTED });
+  } catch {
+    /* the verify link above still works */
+  }
 
   const stampBytes = await readAsset("company-stamp.png");
   if (stampBytes) {

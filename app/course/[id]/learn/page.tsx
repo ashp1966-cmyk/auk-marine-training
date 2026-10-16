@@ -34,6 +34,7 @@ export default function CoursePlayer() {
   const [quizChecked, setQuizChecked] = useState(false);
   const [retaking, setRetaking]     = useState(false);
   const [started, setStarted]       = useState(false);
+  const [preview, setPreview]       = useState(false); // admin preview: nothing is saved
   const [gate, setGate]             = useState<"checking" | "signin" | "denied">("checking");
   const [navOpen, setNavOpen]       = useState(false);
   const [saving, setSaving]         = useState(false);
@@ -58,7 +59,16 @@ export default function CoursePlayer() {
     fetch(`/api/courses/${id}`).then((r) => r.json()).then((d) => setCourse(d.course));
     fetch("/api/learner/me", { credentials: "include" }).then((r) => r.json()).then((d) => {
       if (d.signedIn) { setEmail(d.learner.email); setName(d.learner.name); autoStart(d.learner.email, d.learner.name); }
-      else setGate("signin");
+      else {
+        // No learner session: an admin may preview the course. Local state only, nothing is saved.
+        fetch("/api/auth/me", { credentials: "include" }).then((r) => r.json()).then((a) => {
+          if (a.signedIn) {
+            setPreview(true);
+            setEnrollment({ id: "preview", progress: 0, quizScore: null, completedModules: [], notes: "", learnerId: "preview" });
+            setStarted(true);
+          } else setGate("signin");
+        }).catch(() => setGate("signin"));
+      }
     });
   }, [id]);
 
@@ -134,6 +144,8 @@ export default function CoursePlayer() {
             <>
               <p className="mt-2 text-sm text-gray-500">Sign in to continue this course.</p>
               <Link href="/learn" className="btn-primary mt-4 w-full justify-center">Sign in →</Link>
+              <p className="mt-4 text-sm text-gray-500">Paid already but never set a password? Create one using the <b>same email you booked with</b> and your course unlocks.</p>
+              <Link href="/learn?mode=signup" className="mt-2 block w-full rounded-md border-2 border-teal px-3 py-2 text-center text-sm font-bold text-teal hover:bg-teal hover:text-white">Create my password →</Link>
             </>
           )}
           {gate === "denied" && (
@@ -150,6 +162,7 @@ export default function CoursePlayer() {
   // Debounced notes autosave — writes to the database 1.2s after typing stops
   function onNotesChange(v: string) {
     setNotes(v);
+    if (preview) return;
     setNotesSaved(false);
     clearTimeout(notesTimer.current);
     notesTimer.current = setTimeout(async () => {
@@ -178,6 +191,11 @@ export default function CoursePlayer() {
   async function persist(newCompleted: (number | string)[], quizScore?: number | null) {
     setSaving(true);
     const progress = recalcProgress(newCompleted, quizScore ?? enrollment.quizScore);
+    if (preview) {
+      setEnrollment({ ...enrollment, progress, quizScore: quizScore ?? enrollment.quizScore, completedModules: newCompleted });
+      setSaving(false);
+      return;
+    }
     const res = await fetch("/api/enrollments", {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ learnerId: enrollment.learnerId, courseId: id, progress, quizScore: quizScore ?? enrollment.quizScore, completedModules: newCompleted }),
@@ -212,6 +230,7 @@ export default function CoursePlayer() {
 
   const Sidebar = (
     <aside className="card p-4 lg:sticky lg:top-20 max-h-[80vh] overflow-y-auto">
+      {preview && <p className="mb-3 rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Admin preview — progress is not saved</p>}
       <div className="flex items-center gap-3">
         <svg width="64" height="64" viewBox="0 0 64 64" className="flex-shrink-0">
           <circle cx="32" cy="32" r={R} fill="none" stroke="#e5e7eb" strokeWidth="6" />

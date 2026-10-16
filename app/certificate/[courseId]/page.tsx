@@ -14,7 +14,7 @@ import ConfirmCertificateName from "./confirm-name";
 export default async function Page({ params }: { params: { courseId: string } }) {
   const session = await getLearnerSession();
   if (!session) {
-    redirect(`/learner/login?next=/certificate/${params.courseId}`);
+    redirect("/learn");
   }
 
   const enrollment = await prisma.enrollment.findUnique({
@@ -28,7 +28,7 @@ export default async function Page({ params }: { params: { courseId: string } })
         <h1 style={{ fontSize: "1.5rem", marginBottom: "0.75rem" }}>Course not found</h1>
         <p style={{ color: "#555", lineHeight: 1.6 }}>
           You are not enrolled on this course.{" "}
-          <Link href="/my-learning">Back to my learning</Link>
+          <Link href="/learn">Back to my learning</Link>
         </p>
       </div>
     );

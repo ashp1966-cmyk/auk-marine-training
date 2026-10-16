@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
 import { createLearnerSession } from "@/lib/learnerAuth";
 import { checkRateLimit, clearRateLimit } from "@/lib/rateLimit";
+import { TERMS_VERSION } from "@/lib/legalContent";
 
 const MAX_ATTEMPTS = 10;
 const WINDOW_MS = 10 * 60 * 1000;
@@ -15,7 +16,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Too many attempts — try again later" }, { status: 429 });
   }
 
-  const { email, password } = await req.json();
+  const { email, password, acceptTerms } = await req.json();
+  if (acceptTerms !== true) {
+    return NextResponse.json({ ok: false, error: "Please accept the Terms of Service and Privacy Policy to sign in" }, { status: 400 });
+  }
   const learner = await prisma.learner.findUnique({ where: { email: String(email ?? "").trim().toLowerCase() } });
   const valid = learner?.passwordHash ? await verifyPassword(password || "", learner.passwordHash) : false;
 
@@ -24,6 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   await clearRateLimit(rlKey);
+  await prisma.learner.update({ where: { id: learner!.id }, data: { termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION } });
   await createLearnerSession(learner!.id, learner!.email);
   return NextResponse.json({ ok: true, learner: { id: learner!.id, name: learner!.name, email: learner!.email } });
 }

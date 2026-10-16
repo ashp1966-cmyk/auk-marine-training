@@ -83,6 +83,8 @@ model Learner {
   org          String?
   passwordHash String?      // optional — set if the learner creates a password
   consentAt    DateTime?
+  termsAcceptedAt DateTime?
+  termsVersion    String?
   createdAt    DateTime     @default(now())
   bookings     Booking[]
   enrollments  Enrollment[]

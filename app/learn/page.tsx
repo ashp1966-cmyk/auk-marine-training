@@ -9,6 +9,7 @@ export default function Learn() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(false);
+  const [accept, setAccept] = useState(false);
   const [error, setError] = useState("");
   const [enrollments, setEnrollments] = useState<any[] | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
@@ -17,7 +18,7 @@ export default function Learn() {
   useEffect(() => {
     fetch("/api/learner/me").then((r) => r.json()).then((d) => {
       if (d.signedIn) { setLearner(d.learner); setMode("in"); loadEnrollments(d.learner.email); }
-      else setMode("signin");
+      else setMode(new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin");
     });
   }, []);
 
@@ -29,7 +30,7 @@ export default function Learn() {
 
   async function doLogin() {
     setError("");
-    const res = await fetch("/api/learner/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+    const res = await fetch("/api/learner/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, acceptTerms: accept }) });
     const data = await res.json();
     if (!data.ok) return setError(data.error);
     setLearner(data.learner); setMode("in"); loadEnrollments(data.learner.email);
@@ -38,7 +39,7 @@ export default function Learn() {
   async function doSignup() {
     setError("");
     if (!consent) return setError("Please accept the privacy notice to continue");
-    const res = await fetch("/api/learner/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, password, consent }) });
+    const res = await fetch("/api/learner/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, password, consent, acceptTerms: accept }) });
     const data = await res.json();
     if (!data.ok) return setError(data.error);
     setLearner(data.learner); setMode("in"); loadEnrollments(data.learner.email);
@@ -171,8 +172,12 @@ export default function Learn() {
               I consent to AUK Marine processing my information to manage my learning (POPIA).
             </label>
           )}
+          <label className="flex gap-2 text-xs text-gray-600">
+            <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 flex-shrink-0" />
+            <span>I have read and accept the <a href="/terms" target="_blank" rel="noopener" className="underline">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener" className="underline">Privacy Policy</a>. *</span>
+          </label>
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <button className="btn-primary w-full justify-center" onClick={mode === "signup" ? doSignup : doLogin}>
+          <button className="btn-primary w-full justify-center" disabled={!accept || (mode === "signup" && !consent)} onClick={mode === "signup" ? doSignup : doLogin}>
             {mode === "signup" ? "Create account" : "Sign in"}
           </button>
           {mode === "signin" && (

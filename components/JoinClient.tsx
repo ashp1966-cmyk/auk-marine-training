@@ -11,6 +11,7 @@ export default function JoinClient({ joinToken, domainLock }: { joinToken: strin
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(false);
+  const [accept, setAccept] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -28,7 +29,7 @@ export default function JoinClient({ joinToken, domainLock }: { joinToken: strin
     setBusy(true);
     const res = await fetch(mode === "signup" ? "/api/learner/signup" : "/api/learner/login", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(mode === "signup" ? { name, email: em, password, consent } : { email: em, password }),
+      body: JSON.stringify(mode === "signup" ? { name, email: em, password, consent, acceptTerms: accept } : { email: em, password, acceptTerms: accept }),
     });
     const d = await res.json();
     setBusy(false);
@@ -77,8 +78,12 @@ export default function JoinClient({ joinToken, domainLock }: { joinToken: strin
           I consent to AUK Marine processing my information to manage my learning (POPIA).
         </label>
       )}
+      <label className="flex gap-2 text-xs leading-relaxed text-gray-600">
+        <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 flex-shrink-0" />
+        <span>I have read and accept the <a href="/terms" target="_blank" rel="noopener" className="underline">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener" className="underline">Privacy Policy</a>. *</span>
+      </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button className="btn-primary w-full justify-center" onClick={auth} disabled={busy || !email || !password || (mode === "signup" && !name)}>
+      <button className="btn-primary w-full justify-center" onClick={auth} disabled={busy || !accept || !email || !password || (mode === "signup" && (!name || !consent))}>
         {busy ? "Please wait…" : mode === "signup" ? "Create account & continue →" : "Sign in & continue →"}
       </button>
     </div>

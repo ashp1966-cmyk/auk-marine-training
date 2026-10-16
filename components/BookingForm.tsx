@@ -54,7 +54,7 @@ export default function BookingForm({ course }: { course: any }) {
         const su = await fetch("/api/learner/signup", {
           method: "POST", credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password, consent }),
+          body: JSON.stringify({ name, email, password, consent, acceptTerms: accept }),
         });
         const sd = await su.json().catch(() => ({}));
         if (!sd.ok) {

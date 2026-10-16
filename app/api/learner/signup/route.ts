@@ -10,7 +10,8 @@ export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
   const rl = await checkRateLimit(`learner-signup:${ip}`, 10, 60 * 60 * 1000); // 10 per hour per IP
   if (!rl.allowed) return NextResponse.json({ ok: false, error: "Too many requests — try again later" }, { status: 429 });
-  const { name, email, password, consent, acceptTerms } = await req.json();
+  const { name, email: rawEmail, password, consent, acceptTerms } = await req.json();
+  const email = String(rawEmail ?? "").trim().toLowerCase(); // one canonical form: sign-in already lowercases
   if (!email || !email.includes("@")) return NextResponse.json({ ok: false, error: "Enter a valid email" }, { status: 400 });
   if (!password || password.length < 8) return NextResponse.json({ ok: false, error: "Password must be at least 8 characters" }, { status: 400 });
   if (!consent) return NextResponse.json({ ok: false, error: "Consent is required" }, { status: 400 });

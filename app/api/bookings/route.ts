@@ -7,7 +7,8 @@ import { TERMS_VERSION } from "@/lib/legalContent";
 // POST /api/bookings — create a booking (public, used by BookingForm)
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { courseId, mode, seats, date, name, email, phone, org, consent, method, acceptTerms } = body;
+  const { courseId, mode, seats, date, name, email: rawEmail, phone, org, consent, method, acceptTerms } = body;
+  const email = String(rawEmail ?? "").trim().toLowerCase(); // one canonical form: sign-in already lowercases
 
   if (!courseId || !name || !email || !consent) {
     return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });

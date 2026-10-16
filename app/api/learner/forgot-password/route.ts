@@ -7,7 +7,8 @@ export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
   const rl = await checkRateLimit(`learner-forgot:${ip}`, 5, 15 * 60 * 1000); // 5 per 15 min
   if (!rl.allowed) return NextResponse.json({ ok: true, message: "If that email has an account, a reset link is on its way." }); // Don't reveal rate limit
-  const { email } = await req.json();
+  const { email: rawEmail } = await req.json();
+  const email = String(rawEmail ?? "").trim().toLowerCase(); // one canonical form: sign-in already lowercases
   if (!email) return NextResponse.json({ ok: false, error: "Email required" }, { status: 400 });
 
   const learner = await prisma.learner.findUnique({ where: { email } });

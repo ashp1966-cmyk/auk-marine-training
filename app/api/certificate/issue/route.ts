@@ -63,6 +63,14 @@ export async function POST(req: NextRequest) {
       { status: 403 }
     );
   }
+  // Progress is worked out on the server (see PUT /api/enrollments), so this
+  // cannot be reached by posting a score: every lesson has to be completed too.
+  if (enrollment.progress < 100) {
+    return NextResponse.json(
+      { ok: false, error: "Please complete all lessons before claiming your certificate" },
+      { status: 403 }
+    );
+  }
 
   // Already issued — return the existing one rather than creating a second.
   // @@unique([learnerId, courseId]) enforces this at the database level too.

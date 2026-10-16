@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getLearnerSession } from "@/lib/learnerAuth";
 import { canEnrol } from "@/lib/entitlement";
+import { computeProgress, sanitizeCompleted } from "@/lib/quizGrade";
 
 /**
  * Email normalisation.
@@ -106,16 +107,15 @@ export async function PUT(req: NextRequest) {
   const session = await getLearnerSession();
   if (!session) return NextResponse.json({ ok: false, error: "Please sign in" }, { status: 401 });
 
-  const { learnerId, courseId, progress, quizScore, completedModules, notes } = await req.json();
+  const { learnerId, courseId, completedModules, notes } = await req.json();
   if (!learnerId || !courseId) return NextResponse.json({ ok: false, error: "Missing ids" }, { status: 400 });
   if (learnerId !== session.learnerId) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
   // Partial update — only touch fields actually sent, so a notes-only
   // autosave never wipes progress, and progress saves never wipe notes.
+  // quizScore and progress are NOT taken from the browser: the quiz is marked by
+  // POST /api/quiz/submit, and progress is worked out here from what was completed.
   const data: Record<string, any> = {};
-  if (progress !== undefined) data.progress = progress;
-  if (quizScore !== undefined) data.quizScore = quizScore;
-  if (completedModules !== undefined) data.completedModules = completedModules;
   if (notes !== undefined) data.notes = String(notes).slice(0, 20000);
 
   // Update only — never create. An enrollment must come from a payment, a team
@@ -124,6 +124,17 @@ export async function PUT(req: NextRequest) {
     where: { learnerId_courseId: { learnerId, courseId } },
   });
   if (!existing) return NextResponse.json({ ok: false, error: "Not enrolled" }, { status: 404 });
+  if (completedModules !== undefined) {
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { modules: true, materials: true, videos: true, practical: true, quiz: true },
+    });
+    if (course) {
+      const completed = sanitizeCompleted(completedModules, course);
+      data.completedModules = completed;
+      data.progress = computeProgress(course, completed, existing.quizScore);
+    }
+  }
   const enrollment = await prisma.enrollment.update({
     where: { learnerId_courseId: { learnerId, courseId } },
     data,

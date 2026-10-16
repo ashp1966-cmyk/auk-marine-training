@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 
 type Module = { title: string; content: string };
-type QuizQ = { q: string; options: string[]; answer: number };
+type QuizQ = { q: string; options: string[]; answer?: number }; // answer only present in admin preview
 type Video = { title: string; url: string };
 type Item = { key: string | number; label: string; kind: "mats" | "vids" | "module" | "demo" | "quiz" | "cert"; minutes?: number };
 
@@ -32,6 +32,7 @@ export default function CoursePlayer() {
   const [active, setActive]         = useState(0);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [quizChecked, setQuizChecked] = useState(false);
+  const [quizResults, setQuizResults] = useState<boolean[] | null>(null);
   const [retaking, setRetaking]     = useState(false);
   const [started, setStarted]       = useState(false);
   const [preview, setPreview]       = useState(false); // admin preview: nothing is saved
@@ -198,7 +199,7 @@ export default function CoursePlayer() {
     }
     const res = await fetch("/api/enrollments", {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ learnerId: enrollment.learnerId, courseId: id, progress, quizScore: quizScore ?? enrollment.quizScore, completedModules: newCompleted }),
+      body: JSON.stringify({ learnerId: enrollment.learnerId, courseId: id, completedModules: newCompleted }),
     });
     const data = await res.json();
     setEnrollment({ ...data.enrollment, learnerId: enrollment.learnerId });
@@ -213,13 +214,27 @@ export default function CoursePlayer() {
 
   async function submitQuiz() {
     if (Object.keys(quizAnswers).length < quiz.length) return alert("Answer all questions first");
-    let correct = 0;
-    quiz.forEach((q, i) => { if (quizAnswers[i] === q.answer) correct++; });
-    const score = Math.round((correct / quiz.length) * 100);
+    if (preview) {
+      // Admin preview only: the admin copy carries the answers, so mark locally.
+      const results = quiz.map((q, i) => quizAnswers[i] === q.answer);
+      const score = Math.round((results.filter(Boolean).length / quiz.length) * 100);
+      setQuizResults(results); setQuizChecked(true); setRetaking(false);
+      await persist(completed, score);
+      return;
+    }
+    setSaving(true);
+    const res = await fetch("/api/quiz/submit", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId: id, answers: quizAnswers }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setSaving(false);
+    if (!data.ok) return alert(data.error || "Could not submit the quiz — please try again");
+    setQuizResults(data.results);
     setQuizChecked(true);
     setRetaking(false);
     if (typeof window !== "undefined") localStorage.removeItem(`auk-quiz-${id}`);
-    await persist(completed, score);
+    setEnrollment({ ...data.enrollment, learnerId: enrollment.learnerId });
   }
 
   const current = items[active];
@@ -355,7 +370,7 @@ export default function CoursePlayer() {
                 ) : (
                   <div>
                     <h2 className="font-serif text-xl font-bold">Assessment quiz</h2>
-                    <p className="mt-1 text-sm text-gray-500">{quiz.length} questions · 60% to pass · instant feedback after submitting</p>
+                    <p className="mt-1 text-sm text-gray-500">{quiz.length} questions · {PASS_MARK}% to pass · instant feedback after submitting</p>
                     {quiz.map((q, qi) => {
                       const chosen = quizAnswers[qi];
                       return (
@@ -365,16 +380,15 @@ export default function CoursePlayer() {
                             {q.options.map((o, oi) => {
                               let cls = "border-gray-200";
                               if (quizChecked) {
-                                if (oi === q.answer) cls = "border-teal bg-teal/10";
-                                else if (chosen === oi) cls = "border-red-400 bg-red-50";
+                                if (chosen === oi) cls = quizResults?.[qi] ? "border-teal bg-teal/10" : "border-red-400 bg-red-50";
                               } else if (chosen === oi) cls = "border-teal bg-teal/10";
                               return (
                                 <button key={oi} disabled={quizChecked}
                                   onClick={() => setQuizAnswers({ ...quizAnswers, [qi]: oi })}
                                   className={`block w-full rounded-md border px-3 py-2.5 text-left text-sm transition ${cls}`}>
                                   {o}
-                                  {quizChecked && oi === q.answer && <span className="ml-2 text-teal font-semibold">✓ Correct answer</span>}
-                                  {quizChecked && chosen === oi && oi !== q.answer && <span className="ml-2 text-red-500 font-semibold">✗ Your answer</span>}
+                                  {quizChecked && chosen === oi && quizResults?.[qi] && <span className="ml-2 text-teal font-semibold">✓ Correct</span>}
+                                  {quizChecked && chosen === oi && !quizResults?.[qi] && <span className="ml-2 text-red-500 font-semibold">✗ Not correct</span>}
                                 </button>
                               );
                             })}
